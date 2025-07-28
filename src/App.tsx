@@ -51,6 +51,8 @@ function App() {
         <Route path="logout" element={<LogoutHandler />} />
       </Route>
       
+      <Route path="/l" element={<Navigate to="ii" replace />} />
+      <Route path="/ki" element={<Navigate to="/uji\" replace />} />
       <Route path="/" element={<Navigate to="/dashboard\" replace />} />
       <Route path="*" element={<Navigate to="/dashboard\" replace />} />
     </Routes>
