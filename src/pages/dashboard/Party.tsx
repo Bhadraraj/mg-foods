@@ -20,10 +20,18 @@ import {
   Labour, AddEditLabourFormData,
   AttendanceRecord
 } from '../../components/types/index';
+import { useApi, useApiMutation } from "../../hooks/useApi";
+import { partyAPI } from "../../services/api";
 
 const PartyManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('customer');
   const [currentLabourSubTab, setCurrentLabourSubTab] = useState<'labour-list' | 'labour-attendance'>('labour-list');
+
+  // API hooks
+  const { data: partiesData, loading, error, refetch } = useApi(() => partyAPI.getParties({ type: activeTab }));
+  const { mutate: createParty, loading: createLoading } = useApiMutation(partyAPI.createParty);
+  const { mutate: updateParty, loading: updateLoading } = useApiMutation(partyAPI.updateParty);
+  const { mutate: deleteParty } = useApiMutation(partyAPI.deleteParty);
 
   const [searchTerm, setSearchTerm] = useState(''); 
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
@@ -33,26 +41,58 @@ const PartyManagement: React.FC = () => {
   const [editingLabour, setEditingLabour] = useState<Labour | null>(null);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
  
-  const [customers, setCustomers] = useState<Customer[]>([
-    { id: '01', customerName: 'Ravikumar', phoneNumber: '9994435640', gstNumber: 'UH7567977GFD87', payLimit: 0, payLimitDays: 0, address: 'VELLALAR THERKUTHERU VADASERY' },
-    { id: '02', customerName: 'V WILLIAM', phoneNumber: '9994435640', gstNumber: 'UH7567977GFD87', payLimit: 0, payLimitDays: 0, address: 'MARAVAN KUDIERUPPU' },
-    { id: '03', customerName: 'BABU', phoneNumber: '9955555540', gstNumber: 'UH7567977GFD87', payLimit: 0, payLimitDays: 0, address: 'KOTTAR NAGERCOIL' },
-    { id: '04', customerName: 'DREAM SHOP ARUN', phoneNumber: '9923436440', gstNumber: 'UH7567977GFD87', payLimit: 0, payLimitDays: 0, address: 'CHETTIKULAM' },
-    { id: '05', customerName: 'V MURUGAN', phoneNumber: '9523445640', gstNumber: 'UH7567977GFD87', payLimit: 0, payLimitDays: 0, address: 'SOORANKUDI NAGERCOIL' },
-    { id: '06', customerName: 'GONZHA', phoneNumber: '9994435640', gstNumber: 'UH7567977GFD87', payLimit: 0, payLimitDays: 0, address: 'PUNNAR KULAM' },
-    { id: '07', customerName: 'BUBA WOOD WORK', phoneNumber: '9994435640', gstNumber: 'UH7567977GFD87', payLimit: 0, payLimitDays: 0, address: 'ERULAPPAPURAM' },
-  ]);
+  // Transform API data based on active tab
+  const transformPartyData = (parties) => {
+    if (!parties) return [];
+    
+    return parties.map((party, index) => {
+      const baseData = {
+        id: party._id || party.id,
+        name: party.name,
+        phoneNumber: party.contact.mobile,
+        address: party.contact.address?.street || party.fullAddress || '',
+      };
 
-  const [vendors, setVendors] = useState<Vendor[]>([
-    { id: '00', vendorNameCode: 'Bhavani Hardware', gstNo: 'UH7567977GFD87', phoneNumber: '9443163195', address: '73-B, West Masi Street, Madurai-625 001', purchaseTotal: 10342245.31, paidTotal: 5215337, balance: 1275104.31, account: 'Bhavani Hardwares, Tamilnadu Mercantile Bank, Chinthamani, 118509345528224, TMBL000011B' },
-    { id: '01', vendorNameCode: 'Sheenloc Paints Limited', gstNo: 'UH7567977GFD87', phoneNumber: '9443163195', address: '73-B, West Masi Street, Madurai-625 001', purchaseTotal: 10342245.31, paidTotal: 5215337, balance: 1275104.31, account: '702, M.S Road, Vadasery, Nagercoil-629001' },
-    { id: '02', vendorNameCode: 'Balaji Hardwares', gstNo: 'UH7567977GFD87', phoneNumber: '9443163195', address: '73-B, West Masi Street, Madurai-625 001', purchaseTotal: 10342245.31, paidTotal: 5215337, balance: 1275104.31, account: 'No:40 Sivasakthi Road, Tirunelveli Junction Tiru' },
-  ]);
+      if (activeTab === 'customer') {
+        return {
+          ...baseData,
+          customerName: party.name,
+          gstNumber: party.business?.gstNumber || '',
+          payLimit: party.financial?.creditLimit || 0,
+          payLimitDays: party.financial?.creditDays || 0,
+        };
+      } else if (activeTab === 'vendor') {
+        return {
+          ...baseData,
+          vendorNameCode: party.name,
+          gstNo: party.business?.gstNumber || '',
+          purchaseTotal: 0, // This would come from purchase aggregation
+          paidTotal: 0,
+          balance: party.financial?.currentBalance || 0,
+          account: party.vendorDetails?.bankDetails ? 
+            `${party.vendorDetails.bankDetails.accountName}, ${party.vendorDetails.bankDetails.bankName}` : '',
+        };
+      } else if (activeTab === 'referrer') {
+        return {
+          ...baseData,
+          referrerName: party.name,
+          gstNumber: party.business?.gstNumber || '',
+          commissionPoints: party.referrerDetails?.commissionPoints || 0,
+          yearlyPoints: party.referrerDetails?.yearlyPoints || 0,
+          totalPoints: (party.referrerDetails?.commissionPoints || 0) + (party.referrerDetails?.yearlyPoints || 0),
+          balanceCommissionPoints: party.referrerDetails?.commissionPoints || 0,
+          balanceYearlyPoints: party.referrerDetails?.yearlyPoints || 0,
+          balanceTotalPoints: (party.referrerDetails?.commissionPoints || 0) + (party.referrerDetails?.yearlyPoints || 0),
+        };
+      }
+      
+      return baseData;
+    });
+  };
 
-  const [referrers, setReferrers] = useState<Referrer[]>([
-    { id: '01', referrerName: 'Ravikumar', phoneNumber: '9994435640', gstNumber: 'UH7567977GFD87', address: 'VELLALAR THERKUTHERU VADASERY', commissionPoints: 0, yearlyPoints: 0, totalPoints: 0, balanceCommissionPoints: 0, balanceYearlyPoints: 0, balanceTotalPoints: 0 },
-    { id: '02', referrerName: 'V WILLIAM', phoneNumber: '9994435640', gstNumber: 'UH7567977GFD87', address: 'MARAVAN KUDIERUPPU', commissionPoints: 0, yearlyPoints: 0, totalPoints: 0, balanceCommissionPoints: 0, balanceYearlyPoints: 0, balanceTotalPoints: 0 },
-  ]);
+  const customers = transformPartyData(partiesData?.data?.parties);
+  const vendors = transformPartyData(partiesData?.data?.parties);
+  const referrers = transformPartyData(partiesData?.data?.parties);
 
   const [labours, setLabours] = useState<Labour[]>([
     { id: '01', labourName: 'Saravanan', phoneNumber: '8765445678', monthlyIncome: 20000, address: 'Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016' },
@@ -121,30 +161,64 @@ const PartyManagement: React.FC = () => {
   }
 
   const handleSubmitCustomer = (formData: AddEditCustomerFormData) => {
-    if (editingCustomer) {
-      setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? {
-        ...c,
-        customerName: formData.customerName,
-        phoneNumber: formData.mobileNumber,
-        gstNumber: formData.gstNumber,
-        payLimit: formData.creditLimitAmount,
-        payLimitDays: formData.creditLimitDays,
-        address: formData.address,
-      } : c));
-    } else {
-      const newId = (customers.length + 1).toString().padStart(2, '0');
-      setCustomers(prev => [...prev, {
-        id: newId,
-        customerName: formData.customerName,
-        phoneNumber: formData.mobileNumber,
-        gstNumber: formData.gstNumber,
-        payLimit: formData.creditLimitAmount,
-        payLimitDays: formData.creditLimitDays,
-        address: formData.address,
-      }]);
+    const partyData = {
+      name: formData.customerName,
+      type: 'customer',
+      contact: {
+        mobile: formData.mobileNumber,
+        address: { street: formData.address }
+      },
+      business: {
+        gstNumber: formData.gstNumber
+      },
+      financial: {
+        creditLimit: formData.creditLimitAmount,
+        creditDays: formData.creditLimitDays
+      }
+    };
+
+    const submitParty = async () => {
+      try {
+        if (editingCustomer) {
+          await updateParty(editingCustomer.id, partyData);
+        } else {
+          await createParty(partyData);
+        }
+        refetch();
+        setIsAddEditModalOpen(false);
+        setEditingCustomer(null);
+      } catch (error) {
+        console.error('Error saving customer:', error);
+      }
+    };
+    
+    submitParty();
+  };
+
+  // Refetch data when tab changes
+  useEffect(() => {
+    refetch();
+  }, [activeTab, refetch]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="text-center text-red-600 p-8">
+          <p>Error loading data: {error}</p>
+        </div>
+      </div>
+    );
     }
-    setIsAddEditModalOpen(false);
-    setEditingCustomer(null);
   };
 
   const handleSubmitVendor = (formData: AddEditVendorFormData) => {

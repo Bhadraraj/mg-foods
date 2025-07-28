@@ -17,6 +17,8 @@ import {
   LogOut,
 } from "lucide-react";
 import clsx from "clsx";
+import PermissionGate from "./PermissionGate";
+import { PERMISSIONS } from "../constants/permissions";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -26,6 +28,7 @@ interface SidebarItem {
   name: string;
   path: string;
   icon: React.ReactNode;
+  permission?: string;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
@@ -37,26 +40,50 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       name: "Dashboard",
       path: "/dashboard",
       icon: <LayoutDashboard size={20} />,
+      permission: PERMISSIONS.DASHBOARD_VIEW,
     },
     {
       name: "Reports",
       path: "/dashboard/reports",
       icon: <FileBarChart size={20} />,
+      permission: PERMISSIONS.REPORTS_VIEW,
     },
-    { name: "Sale", path: "/dashboard/sale", icon: <ShoppingBag size={20} /> },
+    { 
+      name: "Sale", 
+      path: "/dashboard/sale", 
+      icon: <ShoppingBag size={20} />,
+      permission: PERMISSIONS.SALES_VIEW,
+    },
     {
       name: "Purchase",
       path: "/dashboard/purchase",
       icon: <ShoppingCart size={20} />,
+      permission: PERMISSIONS.PURCHASE_VIEW,
     },
     {
       name: "Expense",
       path: "/dashboard/expense",
       icon: <Receipt size={20} />,
+      permission: PERMISSIONS.EXPENSE_VIEW,
     },
-    { name: "KOT", path: "/dashboard/kot", icon: <Ticket size={20} /> },
-    { name: "Offers", path: "/dashboard/offers", icon: <Tag size={20} /> },
-    { name: "Recipe", path: "/dashboard/recipe", icon: <ChefHat size={20} /> },
+    { 
+      name: "KOT", 
+      path: "/dashboard/kot", 
+      icon: <Ticket size={20} />,
+      permission: PERMISSIONS.KOT_VIEW,
+    },
+    { 
+      name: "Offers", 
+      path: "/dashboard/offers", 
+      icon: <Tag size={20} />,
+      permission: PERMISSIONS.OFFERS_VIEW,
+    },
+    { 
+      name: "Recipe", 
+      path: "/dashboard/recipe", 
+      icon: <ChefHat size={20} />,
+      permission: PERMISSIONS.RECIPE_VIEW,
+    },
   ];
 
   const managementItems: SidebarItem[] = [
@@ -64,9 +91,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       name: "Inventory",
       path: "/dashboard/inventory",
       icon: <PackageOpen size={20} />,
+      permission: PERMISSIONS.INVENTORY_VIEW,
     },
-    { name: "Item", path: "/dashboard/item", icon: <Package size={20} /> },
-    { name: "Party", path: "/dashboard/party", icon: <Users size={20} /> },
+    { 
+      name: "Item", 
+      path: "/dashboard/item", 
+      icon: <Package size={20} />,
+      permission: PERMISSIONS.ITEMS_VIEW,
+    },
+    { 
+      name: "Party", 
+      path: "/dashboard/party", 
+      icon: <Users size={20} />,
+      permission: PERMISSIONS.PARTY_VIEW,
+    },
   ];
 
   const administrationItems: SidebarItem[] = [
@@ -74,25 +112,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       name: "Management",
       path: "/dashboard/management",
       icon: <Settings size={20} />,
+      permission: PERMISSIONS.USERS_VIEW,
     },
     { name: "Logout", path: "/dashboard/logout", icon: <LogOut size={20} /> },
   ];
 
   const renderSidebarItems = (items: SidebarItem[]) => {
     return items.map((item) => (
-      <Link
-        key={item.path}
-        to={item.path}
-        className={clsx(
-          "flex items-center px-4 py-3 text-sm font-medium rounded-md",
-          location.pathname === item.path
-            ? "text-blue-700 bg-blue-50"
-            : "text-gray-600 hover:text-blue-700 hover:bg-blue-50"
-        )}
-      >
-        <span className="mr-3">{item.icon}</span>
-        {isOpen && <span>{item.name}</span>}
-      </Link>
+      <PermissionGate key={item.path} permission={item.permission}>
+        <Link
+          to={item.path}
+          className={clsx(
+            "flex items-center px-4 py-3 text-sm font-medium rounded-md",
+            location.pathname === item.path
+              ? "text-blue-700 bg-blue-50"
+              : "text-gray-600 hover:text-blue-700 hover:bg-blue-50"
+          )}
+        >
+          <span className="mr-3">{item.icon}</span>
+          {isOpen && <span>{item.name}</span>}
+        </Link>
+      </PermissionGate>
     ));
   };
 
