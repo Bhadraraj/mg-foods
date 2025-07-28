@@ -7,8 +7,9 @@ import LabourTable from "./management/LabourTable";
 import AddEditLabourModal from "./management/AddEditLabourModal";
 import { User, NewUserFormData, Role, AddRoleFormData, Labour, AddLabourFormData, ScreenPermission } from "../../components/types";
 import { Plus } from "lucide-react";
+import { useApi, useApiMutation } from "../../hooks/useApi";
+import { usersAPI } from "../../services/api";
 
-const initialUsers: User[] = [
   { no: "01", name: "Sundar", mobile: "6775776558", role: "Admin", store: "All", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
   { no: "02", name: "VENI", mobile: "7010396993", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
   { no: "03", name: "USHA", mobile: "9994611220", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
@@ -20,21 +21,17 @@ const initialUsers: User[] = [
 ];
 
 const initialRoles: Role[] = [
-  { no: "01", roleName: "Admin", screens: [{ name: "Full Access", hasAccess: true }], status: "Active" },
-  { no: "02", roleName: "Manager", screens: [{ name: "Sales", hasAccess: true }, { name: "Reports", hasAccess: true }], status: "Active" },
-  { no: "03", roleName: "Staff", screens: [{ name: "POS", hasAccess: true }, { name: "KOT", hasAccess: true }], status: "Inactive" },
-];
-
-const initialLabours: Labour[] = [
-  { no: "01", name: "Kumar", mobile: "9124321345", address: "D-57, Main Road, Brahmpuri", monthlySalary: 16890 },
-  { no: "02", name: "Shiva", mobile: "9124321345", address: "D-57, Main Road, Brahmpuri", monthlySalary: 16890 },
-];
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("User");
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  
+  // API hooks
+  const { data: usersData, loading: usersLoading, error: usersError, refetch: refetchUsers } = useApi(usersAPI.getUsers);
+  const { mutate: createUser, loading: createLoading } = useApiMutation(usersAPI.createUser);
+  const { mutate: updateUser, loading: updateLoading } = useApiMutation(usersAPI.updateUser);
+  const { mutate: toggleUserStatus } = useApiMutation(usersAPI.toggleUserStatus);
 
   const [isAddEditRoleModalOpen, setIsAddEditRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -55,48 +52,51 @@ const Dashboard: React.FC = () => {
   };
 
   const handleAddUserSubmit = (formData: NewUserFormData) => {
-    if (editingUser) {
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.no === editingUser.no
-            ? {
-                ...user,
-                name: formData.name,
-                mobile: formData.mobile,
-                role: formData.role,
-                createdBy: formData.email,
-              }
-            : user
-        )
-      );
-    } else {
-      const newUserId = (users.length + 1).toString().padStart(2, "0");
-      const newUser: User = {
-        no: newUserId,
-        name: formData.name,
-        mobile: formData.mobile,
-        role: formData.role,
-        store: "NA",
-        status: true,
-        createdBy: formData.email,
-        createdAt: new Date().toLocaleDateString("en-US", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }),
-      };
-      setUsers((prevUsers) => [...prevUsers, newUser]);
-    }
-    setIsAddUserModalOpen(false);
+    const submitUser = async () => {
+      try {
+        if (editingUser) {
+          await updateUser(editingUser.id, formData);
+        } else {
+          await createUser(formData);
+        }
+        refetchUsers();
+        setIsAddUserModalOpen(false);
+        setEditingUser(null);
+      } catch (error) {
+        console.error('Error saving user:', error);
+      }
+    };
+    
+    submitUser();
   };
 
-  const handleToggleUserStatus = (userId: string) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.no === userId ? { ...user, status: !user.status } : user
-      )
-    );
+  const handleToggleUserStatus = async (userId: string) => {
+    try {
+      await toggleUserStatus(userId);
+      refetchUsers();
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+    }
   };
+
+  // Transform API data to match component interface
+  const users = usersData?.data?.users?.map((user, index) => ({
+    no: (index + 1).toString().padStart(2, "0"),
+    id: user.id || user._id,
+    name: user.name,
+    mobile: user.mobile,
+    email: user.email,
+    role: user.role,
+    store: user.store,
+    status: user.isActive,
+    createdBy: user.email,
+    createdAt: new Date(user.createdAt).toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    billType: user.billType,
+  })) || [];
 
   const handleAddRoleClick = () => {
     setEditingRole(null);
@@ -195,6 +195,8 @@ const Dashboard: React.FC = () => {
         return (
           <UserTable
             users={users}
+            loading={usersLoading}
+            error={usersError}
             onEditUser={handleEditUserClick}
             onToggleStatus={handleToggleUserStatus}
           />
@@ -304,6 +306,7 @@ const Dashboard: React.FC = () => {
         onClose={() => setIsAddUserModalOpen(false)}
         onSubmit={handleAddUserSubmit}
         editingUser={editingUser}
+        loading={createLoading || updateLoading}
       />
 
       <AddEditRoleModal

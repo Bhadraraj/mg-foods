@@ -13,23 +13,29 @@ interface MenuItem {
 
 interface ItemListProps {
   setShowNewItemForm: (show: boolean) => void;
+  items: any[];
+  loading: boolean;
+  error: string | null;
+  onEditItem: (item: any) => void;
+  onDeleteItem: (itemId: string) => void;
 }
 
-const ItemList: React.FC<ItemListProps> = ({ setShowNewItemForm }) => {
+const ItemList: React.FC<ItemListProps> = ({ 
+  setShowNewItemForm, 
+  items, 
+  loading, 
+  error, 
+  onEditItem, 
+  onDeleteItem 
+}) => {
   const [activeTab, setActiveTab] = useState<"item" | "category">("item");
   const [isMenuManagementOpen, setIsMenuManagementOpen] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const menuItems: MenuItem[] = [
-    {
-      id: "01",
-      name: "5-Star",
-      hsnCode: "IGF908",
-      itemCode: "IGF908",
-      sellPrice: "₹0.00",
-      purchasePrice: "₹0.00",
-      currentStock: 97,
-    },
-  ];
+  const filteredItems = items.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.itemCode?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
@@ -59,6 +65,8 @@ const ItemList: React.FC<ItemListProps> = ({ setShowNewItemForm }) => {
               <input
                 type="text"
                 placeholder="Search by name, item code"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
               />
               <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
@@ -80,6 +88,15 @@ const ItemList: React.FC<ItemListProps> = ({ setShowNewItemForm }) => {
       </div>
 
       <div className="overflow-x-auto">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center text-red-600 p-8">
+            <p>Error loading items: {error}</p>
+          </div>
+        ) : (
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -110,39 +127,68 @@ const ItemList: React.FC<ItemListProps> = ({ setShowNewItemForm }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {menuItems.map((item) => (
-              <tr key={item.id}>
+            {filteredItems.map((item, index) => (
+              <tr key={item._id || item.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.id}
+                  {index + 1}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 bg-blue-700 rounded"></div>
+                    {item.images && item.images.length > 0 ? (
+                      <img 
+                        src={item.images[0].url} 
+                        alt={item.name}
+                        className="h-10 w-10 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 bg-blue-700 rounded"></div>
+                    )}
                     <span className="ml-3 text-sm text-gray-900">{item.name}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.hsnCode}
+                  {item.hsnCode || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.itemCode}
+                  {item.itemCode || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {item.sellPrice}
+                  ₹{item.pricing?.sellingPrice?.toFixed(2) || '0.00'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {item.purchasePrice}
+                  ₹{item.pricing?.purchasePrice?.toFixed(2) || '0.00'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.currentStock}
+                  {item.stock?.currentStock || 0}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button className="text-blue-700 hover:text-blue-800">Edit</button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => onEditItem(item)}
+                      className="text-blue-700 hover:text-blue-800"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => onDeleteItem(item._id || item.id)}
+                      className="text-red-700 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
+            {filteredItems.length === 0 && !loading && (
+              <tr>
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                  No items found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+        )}
       </div>
     </div>
   );

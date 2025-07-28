@@ -6,14 +6,15 @@ interface AddUserModalProps {
   onClose: () => void;
   onSubmit: (formData: NewUserFormData) => void;
   editingUser?: User | null;
+  loading?: boolean;
 }
 
-const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSubmit, editingUser }) => {
+const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSubmit, editingUser, loading }) => {
   const [formData, setFormData] = useState<NewUserFormData>({
     name: "",
     mobile: "",
-    role: "",
     email: "",
+    role: "",
     password: "",
     billType: "",
   });
@@ -23,17 +24,17 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSubmit, 
       setFormData({
         name: editingUser.name,
         mobile: editingUser.mobile,
+        email: editingUser.email,
         role: editingUser.role,
-        email: editingUser.createdBy.split(' ')[0], // Assuming email is part of createdBy for simplicity
         password: "", // Passwords are typically not pre-filled for security
-        billType: "", // Not available in User type, needs adjustment or removal
+        billType: editingUser.billType || "",
       });
     } else {
       setFormData({
         name: "",
         mobile: "",
-        role: "",
         email: "",
+        role: "",
         password: "",
         billType: "",
       });
@@ -91,16 +92,19 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSubmit, 
           </div>
           <div>
             <label htmlFor="role" className="block text-sm font-medium text-gray-700">Role</label>
-            <input
-              type="text"
+            <select
               id="role"
               name="role"
               value={formData.role}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter Role"
               required
-            />
+            >
+              <option value="">Select Role</option>
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+              <option value="cashier">Cashier</option>
+            </select>
           </div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
@@ -139,8 +143,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSubmit, 
               required
             >
               <option value="">Select Bill Type</option>
-              <option value="Type A">Type A</option>
-              <option value="Type B">Type B</option>
+              <option value="GST">GST</option>
+              <option value="Non-GST">Non-GST</option>
+              <option value="Both">Both</option>
             </select>
           </div>
           <div className="col-span-1 sm:col-span-2 flex justify-end gap-3 mt-6">
@@ -153,9 +158,10 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSubmit, 
             </button>
             <button
               type="submit"
+              disabled={loading}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              {editingUser ? "Update" : "Submit"}
+              {loading ? 'Saving...' : (editingUser ? "Update" : "Submit")}
             </button>
           </div>
         </form>

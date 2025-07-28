@@ -53,8 +53,16 @@ interface Bill {
     billAmount: number;
   };
 }
+import { useApi, useApiMutation } from "../../hooks/useApi";
+import { salesAPI } from "../../services/api";
 
 const BillingSystem: React.FC = () => {
+  // API hooks
+  const { data: salesData, loading, error, refetch } = useApi(salesAPI.getSales);
+  const { mutate: deleteSale } = useApiMutation(salesAPI.deleteSale);
+  const { mutate: processPayment } = useApiMutation(salesAPI.processPayment);
+  const { mutate: refundSale } = useApiMutation(salesAPI.refundSale);
+
   // State for the main invoice modal (for "New Invoice" and "Edit")
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
@@ -71,78 +79,53 @@ const BillingSystem: React.FC = () => {
   const [selectedBillForAction, setSelectedBillForAction] =
     useState<Bill | null>(null);
 
-  const [bills, setBills] = useState<Bill[]>([
-    {
-      id: "MGEST202505150111",
-      customer: {
-        name: "MODERN FURNITURE",
-        phone: "9894059540",
-        mobileNumber: "9894059540",
-        address: "Sample Address 1",
-        gstin: "GSTIN001",
-      },
-      products: [
-        {
-          name: "Product 01",
-          description: "Description",
-          quantity: 2,
-          amount: 1000,
-        },
-        {
-          name: "Product 02",
-          description: "Description",
-          quantity: 1,
-          amount: 800,
-        },
-      ],
-      kotStatus: "Completed",
-      paymentDetails: { credit: 1820, cash: 1820 },
-      billDate: "15 May 2025 10:18",
-      updateDate: "15 May 2025 10:27",
-      creator: "SANTHYAG",
-      currentBillType: "GST", // Added for ChangeBillTypeModal
-      billNo: "MGEST202505150111", // Added for BillReturnModal
-      billAmount: 1800, // Total of products for BillReturnModal
-      saleRep: "SANTHYAG", // Added for BillReturnModal
-      payment: { billNo: "UPI", saleRep: "SANTHYAG", billAmount: 1820 }, // Added for BillReturnModal
+  // Transform API data to match component interface
+  const bills = salesData?.data?.sales?.map(sale => ({
+    id: sale.billNo,
+    customer: {
+      name: sale.customer.name,
+      phone: sale.customer.mobile,
+      mobileNumber: sale.customer.mobile,
+      address: sale.customer.address || '',
+      gstin: sale.customer.gstNumber || '',
     },
-    {
-      id: "MGEST202505150001",
-      customer: {
-        name: "SHAJU B",
-        phone: "7200521590",
-        mobileNumber: "7200521590",
-        address: "Sample Address 2",
-        gstin: "GSTIN002",
-      },
-      products: [
-        {
-          name: "Product 01",
-          description: "Description",
-          quantity: 1,
-          amount: 500,
-        },
-        {
-          name: "Product 02",
-          description: "Description",
-          quantity: 3,
-          amount: 1500,
-        },
-      ],
-      kotStatus: "Cancelled",
-      paymentDetails: { credit: 1820, cash: 1820 },
-      billDate: "15 May 2025 10:18",
-      updateDate: "15 May 2025 10:27",
-      creator: "SANTHYAG",
-      isCancelled: true,
-      currentBillType: "Estimation", // Added for ChangeBillTypeModal
-      billNo: "MGEST202505150001", // Added for BillReturnModal
-      billAmount: 2000, // Total of products for BillReturnModal
-      saleRep: "SANTHYAG", // Added for BillReturnModal
-      payment: { billNo: "Cash", saleRep: "SANTHYAG", billAmount: 2000 }, // Added for BillReturnModal
+    products: sale.items.map(item => ({
+      name: item.itemName,
+      description: item.variant || 'Standard',
+      quantity: item.quantity,
+      amount: item.total,
+    })),
+    kotStatus: sale.kotStatus === 'completed' ? 'Completed' : 'Pending',
+    paymentDetails: { 
+      credit: sale.pricing.grandTotal, 
+      cash: sale.payment.amountReceived || 0 
     },
-    // Add more dummy data as needed
-  ]);
+    billDate: new Date(sale.createdAt).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
+    updateDate: new Date(sale.updatedAt || sale.createdAt).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
+    creator: sale.createdBy?.name || 'System',
+    currentBillType: sale.billType,
+    billNo: sale.billNo,
+    billAmount: sale.pricing.grandTotal,
+    saleRep: sale.createdBy?.name || 'System',
+    payment: { 
+      billNo: sale.payment.method, 
+      saleRep: sale.createdBy?.name || 'System', 
+      billAmount: sale.pricing.grandTotal 
+    },
+    isCancelled: sale.status === 'cancelled',
+  })) || [];
 
   // --- Invoice Modal (New/Edit) Handlers ---
   const openInvoiceModal = (bill: Bill | null = null) => {
@@ -193,8 +176,11 @@ const BillingSystem: React.FC = () => {
   const handleDeleteConfirm = () => {
     if (selectedBillForAction) {
       console.log(`Deleting bill: ${selectedBillForAction.id}`);
-      // Implement your delete logic here
-      setBills(bills.filter((b) => b.id !== selectedBillForAction.id)); // Example: remove from state
+      deleteSale(selectedBillForAction.id).then(() => {
+        refetch();
+      }).catch(error => {
+        console.error('Error deleting sale:', error);
+      });
     }
     closeActionModal(setIsDeleteModalOpen);
   };
@@ -204,14 +190,8 @@ const BillingSystem: React.FC = () => {
       console.log(
         `Changing bill ${selectedBillForAction.id} to type: ${newType}`
       );
-      // Update the bill's type in your state or send to API
-      setBills((prevBills) =>
-        prevBills.map((bill) =>
-          bill.id === selectedBillForAction.id
-            ? { ...bill, currentBillType: newType }
-            : bill
-        )
-      );
+      // Implement bill type change API call here
+      refetch();
     }
     closeActionModal(setIsChangeBillTypeModalOpen);
   };
@@ -230,16 +210,25 @@ const BillingSystem: React.FC = () => {
       {/* Top section with stats */}
       <div className="bg-white border-b px-4 py-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {loading ? (
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-600 p-4">
+              <p>Error loading sales: {error}</p>
+            </div>
+          ) : (
           <div className="flex flex-wrap items-start gap-8 text-sm">
             <div className="flex flex-col">
               <span className="text-gray-600">Total Bills</span>
-              <span className="text-2xl font-bold text-blue-600">132</span>
+              <span className="text-2xl font-bold text-blue-600">{bills.length}</span>
             </div>
 
             <div className="flex flex-col">
               <span className="text-gray-600">Total Net Amount</span>
               <span className="text-2xl font-bold text-green-600">
-                ₹ 117,894,023
+                ₹ {bills.reduce((sum, bill) => sum + bill.billAmount, 0).toLocaleString()}
               </span>
             </div>
 
@@ -260,10 +249,11 @@ const BillingSystem: React.FC = () => {
             <div className="flex flex-col">
               <span className="text-gray-600">Pending</span>
               <span className="text-2xl font-bold text-red-600">
-                ₹ 42,894,023
+                ₹ {bills.filter(bill => bill.kotStatus === 'Pending').reduce((sum, bill) => sum + bill.billAmount, 0).toLocaleString()}
               </span>
             </div>
           </div>
+          )}
 
           <div className="text-sm text-gray-600">12 Aug 2025 - 22 Aug 2025</div>
         </div>
