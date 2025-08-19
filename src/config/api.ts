@@ -1,10 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-<<<<<<< HEAD
   BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-=======
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://your-api-domain.com/api',
->>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
   TIMEOUT: 10000,
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
@@ -23,20 +19,13 @@ export const ENDPOINTS = {
   },
   
   // User Management
-<<<<<<< HEAD
  
-=======
->>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
   USERS: {
     BASE: '/users',
     BY_ID: (id: string) => `/users/${id}`,
     TOGGLE_STATUS: (id: string) => `/users/${id}/toggle-status`,
     PERMISSIONS: (id: string) => `/users/${id}/permissions`,
   },
-<<<<<<< HEAD
-=======
-  
->>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
   // Category Management
   CATEGORIES: {
     BASE: '/categories',
@@ -66,12 +55,8 @@ export const ENDPOINTS = {
   LABOUR: {
     BASE: '/labour',
     BY_ID: (id: string) => `/labour/${id}`,
-<<<<<<< HEAD
     TOGGLE_STATUS: (id: string) => `/labour/${id}/toggle-status`,
     ATTENDANCE: '/labour/attendance',
-=======
-    ATTENDANCE: '/labour-attendance',
->>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
   },
   
   // Rack Management
@@ -84,7 +69,6 @@ export const ENDPOINTS = {
   
   // Purchase Management
   PURCHASES: {
-<<<<<<< HEAD
     BASE: '/purchases',
     BY_ID: (id: string) => `/purchases/${id}`,
     STATUS: (id: string) => `/purchases/${id}/status`,
@@ -98,11 +82,4 @@ export const ENDPOINTS = {
     PERMISSIONS: (id: string) => `/roles/${id}/permissions`,
   },
 
-=======
-    BASE: '/v1/purchases',
-    BY_ID: (id: string) => `/v1/purchases/${id}`,
-    STATUS: (id: string) => `/v1/purchases/${id}/status`,
-    STOCK_ENTRY: (id: string) => `/v1/purchases/${id}/stock-entry`,
-  },
->>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
 } as const;
