@@ -1,10 +1,9 @@
 import React from "react";
-import DashboardCard from "../../components/DashboardCard";
-import ReceivableCard from "../../components/ReceivableCard";
-import TransactionTable from "../../components/TransactionTable";
-import OnlineOrderCard from "../../components/OnlineOrderCard";
+import { DashboardCard, ReceivableCard, OnlineOrderCard } from "../../components/cards";
+import { TransactionTable } from "../../components/tables";
 import { PlusCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+
 const Overview: React.FC = () => {
   const transactions = [
     { id: "01", customer: "Kumar", paymentType: "Cash", amount: "120" },
