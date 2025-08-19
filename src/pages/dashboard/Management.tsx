@@ -5,19 +5,12 @@ import RoleTable from "./management/RoleTable";
 import AddEditRoleModal from "./management/AddEditRoleModal";
 import LabourTable from "./management/LabourTable";
 import AddEditLabourModal from "./management/AddEditLabourModal";
-import { User, NewUserFormData, Role, AddRoleFormData, Labour, AddLabourFormData, ScreenPermission } from "../../components/types";
+import { User, NewUserFormData, Role, AddRoleFormData, Labour, AddLabourFormData, ScreenPermission } from "../../types";
+import { useUsers } from "../../hooks/useUsers";
+import { useLabour } from "../../hooks/useLabour";
+import { useUserManagement, useLabourManagement } from "../../components/hooks/useManagement";
 import { Plus } from "lucide-react";
 
-const initialUsers: User[] = [
-  { no: "01", name: "Sundar", mobile: "6775776558", role: "Admin", store: "All", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "02", name: "VENI", mobile: "7010396993", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "03", name: "USHA", mobile: "9994611220", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "04", name: "SUGANYA", mobile: "9629365770", role: "Role02", store: "NA", status: false, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "05", name: "Sudha", mobile: "6775776558", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "06", name: "Sheeba Sekar", mobile: "6775776558", role: "Role02", store: "NA", status: false, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "07", name: "SANTHYAG", mobile: "6379517048", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "08", name: "SANDHIYA", mobile: "8807002085", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-];
 
 const initialRoles: Role[] = [
   { no: "01", roleName: "Admin", screens: [{ name: "Full Access", hasAccess: true }], status: "Active" },
@@ -25,16 +18,11 @@ const initialRoles: Role[] = [
   { no: "03", roleName: "Staff", screens: [{ name: "POS", hasAccess: true }, { name: "KOT", hasAccess: true }], status: "Inactive" },
 ];
 
-const initialLabours: Labour[] = [
-  { no: "01", name: "Kumar", mobile: "9124321345", address: "D-57, Main Road, Brahmpuri", monthlySalary: 16890 },
-  { no: "02", name: "Shiva", mobile: "9124321345", address: "D-57, Main Road, Brahmpuri", monthlySalary: 16890 },
-];
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("User");
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(initialUsers);
 
   const [isAddEditRoleModalOpen, setIsAddEditRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -42,8 +30,10 @@ const Dashboard: React.FC = () => {
 
   const [isAddEditLabourModalOpen, setIsAddEditLabourModalOpen] = useState(false);
   const [editingLabour, setEditingLabour] = useState<Labour | null>(null);
-  const [labours, setLabours] = useState<Labour[]>(initialLabours);
 
+  // Use API hooks
+  const { users, createUser, updateUser, toggleUserStatus } = useUserManagement();
+  const { labours, createLabour, updateLabour, deleteLabour } = useLabourManagement();
   const handleAddUserClick = () => {
     setEditingUser(null);
     setIsAddUserModalOpen(true);
@@ -56,46 +46,15 @@ const Dashboard: React.FC = () => {
 
   const handleAddUserSubmit = (formData: NewUserFormData) => {
     if (editingUser) {
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.no === editingUser.no
-            ? {
-                ...user,
-                name: formData.name,
-                mobile: formData.mobile,
-                role: formData.role,
-                createdBy: formData.email,
-              }
-            : user
-        )
-      );
+      updateUser(editingUser.no, formData);
     } else {
-      const newUserId = (users.length + 1).toString().padStart(2, "0");
-      const newUser: User = {
-        no: newUserId,
-        name: formData.name,
-        mobile: formData.mobile,
-        role: formData.role,
-        store: "NA",
-        status: true,
-        createdBy: formData.email,
-        createdAt: new Date().toLocaleDateString("en-US", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }),
-      };
-      setUsers((prevUsers) => [...prevUsers, newUser]);
+      createUser(formData);
     }
     setIsAddUserModalOpen(false);
   };
 
   const handleToggleUserStatus = (userId: string) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.no === userId ? { ...user, status: !user.status } : user
-      )
-    );
+    toggleUserStatus(userId);
   };
 
   const handleAddRoleClick = () => {
@@ -162,29 +121,9 @@ const Dashboard: React.FC = () => {
 
   const handleAddEditLabourSubmit = (formData: AddLabourFormData) => {
     if (editingLabour) {
-      setLabours((prevLabours) =>
-        prevLabours.map((labour) =>
-          labour.no === editingLabour.no
-            ? {
-                ...labour,
-                name: formData.name,
-                mobile: formData.mobile,
-                address: formData.address,
-                monthlySalary: formData.monthlySalary,
-              }
-            : labour
-        )
-      );
+      updateLabour(editingLabour.no, formData);
     } else {
-      const newLabourNo = (labours.length + 1).toString().padStart(2, "0");
-      const newLabour: Labour = {
-        no: newLabourNo,
-        name: formData.name,
-        mobile: formData.mobile,
-        address: formData.address,
-        monthlySalary: formData.monthlySalary,
-      };
-      setLabours((prevLabours) => [...prevLabours, newLabour]);
+      createLabour(formData);
     }
     setIsAddEditLabourModalOpen(false);
   };

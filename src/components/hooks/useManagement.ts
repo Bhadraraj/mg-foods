@@ -1,119 +1,61 @@
-// hooks/useManagement.ts
 import { useState, useEffect } from 'react';
-import { userApi, roleApi, labourApi } from '../services/userService';
-import { User, Role, Labour, NewUserFormData, AddRoleFormData, AddLabourFormData } from '../types';
+import { userService } from '../../services/api/user';
+import { labourService } from '../../services/api/labour';
+import { User, Role, Labour, NewUserFormData, AddRoleFormData, AddLabourFormData } from '../../types';
+import { useApiMutation, useApiQuery } from '../../hooks/useApi';
 
-// Toast utility
-const toast = {
-  success: (message: string) => console.log('✅', message),
-  error: (message: string) => console.error('❌', message),
-};
 
 // User Management Hook
 export const useUserManagement = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: usersData,
+    loading,
+    error,
+    execute: fetchUsers,
+  } = useApiQuery<{ users: User[] }>({
+    showSuccessToast: false,
+  });
 
-  const fetchUsers = async (params?: any) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await userApi.getAll(params);
-      setUsers(response.data.users || response.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch users');
-      toast.error('Failed to fetch users');
-    } finally {
-      setLoading(false);
-    }
+  const {
+    execute: createUserMutation,
+    loading: createLoading,
+  } = useApiMutation({
+    successMessage: 'User created successfully',
+    onSuccess: () => fetchUsersData(),
+  });
+
+  const fetchUsersData = async (params?: any) => {
+    await fetchUsers(() => userService.getUsers(params));
   };
 
   const createUser = async (userData: NewUserFormData) => {
-    try {
-      setLoading(true);
-      const response = await userApi.create({
-        name: userData.name,
-        email: userData.email,
-        password: userData.password || '',
-        mobile: userData.mobile,
-        role: userData.role,
-        store: userData.store,
-        billType: userData.billType,
-      });
-      
-      toast.success('User created successfully');
-      await fetchUsers(); // Refresh the list
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create user');
-      toast.error('Failed to create user');
-      return false;
-    } finally {
-      setLoading(false);
-    }
+    await createUserMutation(() => userService.createUser(userData));
+    return true;
   };
 
   const updateUser = async (userId: string, userData: Partial<NewUserFormData>) => {
-    try {
-      setLoading(true);
-      await userApi.update(userId, {
-        name: userData.name,
-        mobile: userData.mobile,
-        store: userData.store,
-        role: userData.role,
-        billType: userData.billType,
-      });
-      
-      toast.success('User updated successfully');
-      await fetchUsers(); // Refresh the list
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
-      toast.error('Failed to update user');
-      return false;
-    } finally {
-      setLoading(false);
-    }
+    await createUserMutation(() => userService.updateUser(userId, userData));
+    return true;
   };
 
   const deleteUser = async (userId: string) => {
-    try {
-      setLoading(true);
-      await userApi.delete(userId);
-      toast.success('User deleted successfully');
-      await fetchUsers(); // Refresh the list
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user');
-      toast.error('Failed to delete user');
-      return false;
-    } finally {
-      setLoading(false);
-    }
+    await createUserMutation(() => userService.deleteUser(userId));
+    return true;
   };
 
   const toggleUserStatus = async (userId: string) => {
-    try {
-      await userApi.toggleStatus(userId);
-      toast.success('User status updated successfully');
-      await fetchUsers(); // Refresh the list
-      return true;
-    } catch (err) {
-      toast.error('Failed to update user status');
-      return false;
-    }
+    await createUserMutation(() => userService.toggleUserStatus(userId));
+    return true;
   };
-
   useEffect(() => {
-    fetchUsers();
+    fetchUsersData();
   }, []);
 
   return {
-    users,
+    users: usersData?.users || [],
     loading,
     error,
-    fetchUsers,
+    fetchUsers: fetchUsersData,
     createUser,
     updateUser,
     deleteUser,
@@ -131,11 +73,10 @@ export const useRoleManagement = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await roleApi.getAll(params);
-      setRoles(response.data.roles || response.data || []);
+      // TODO: Implement role service when API is available
+      setRoles([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch roles');
-      toast.error('Failed to fetch roles');
+      setError('Failed to fetch roles');
     } finally {
       setLoading(false);
     }
@@ -160,17 +101,11 @@ export const useRoleManagement = () => {
         }
       });
 
-      await roleApi.create({
-        roleName: roleData.roleName,
-        permissions,
-      });
-      
-      toast.success('Role created successfully');
+      // TODO: Implement role creation when API is available
       await fetchRoles(); // Refresh the list
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create role');
-      toast.error('Failed to create role');
+      setError('Failed to create role');
       return false;
     } finally {
       setLoading(false);
@@ -196,18 +131,11 @@ export const useRoleManagement = () => {
         }
       });
 
-      await roleApi.update(roleId, {
-        roleName: roleData.roleName,
-        permissions,
-        isActive: true,
-      });
-      
-      toast.success('Role updated successfully');
+      // TODO: Implement role update when API is available
       await fetchRoles(); // Refresh the list
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update role');
-      toast.error('Failed to update role');
+      setError('Failed to update role');
       return false;
     } finally {
       setLoading(false);
@@ -217,13 +145,11 @@ export const useRoleManagement = () => {
   const deleteRole = async (roleId: string) => {
     try {
       setLoading(true);
-      await roleApi.delete(roleId);
-      toast.success('Role deleted successfully');
+      // TODO: Implement role deletion when API is available
       await fetchRoles(); // Refresh the list
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete role');
-      toast.error('Failed to delete role');
+      setError('Failed to delete role');
       return false;
     } finally {
       setLoading(false);
@@ -232,12 +158,11 @@ export const useRoleManagement = () => {
 
   const toggleRoleStatus = async (roleId: string) => {
     try {
-      await roleApi.toggleStatus(roleId);
-      toast.success('Role status updated successfully');
+      // TODO: Implement role status toggle when API is available
       await fetchRoles(); // Refresh the list
       return true;
     } catch (err) {
-      toast.error('Failed to update role status');
+      setError('Failed to update role status');
       return false;
     }
   };
@@ -260,81 +185,60 @@ export const useRoleManagement = () => {
 
 // Labour Management Hook
 export const useLabourManagement = () => {
-  const [labours, setLabours] = useState<Labour[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: labourData,
+    loading,
+    error,
+    execute: fetchLabour,
+  } = useApiQuery<{ labour: Labour[] }>({
+    showSuccessToast: false,
+  });
 
-  const fetchLabours = async (params?: any) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await labourApi.getAll(params);
-      setLabours(response.data.labours || response.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch labour records');
-      toast.error('Failed to fetch labour records');
-    } finally {
-      setLoading(false);
-    }
+  const {
+    execute: createLabourMutation,
+    loading: createLoading,
+  } = useApiMutation({
+    successMessage: 'Labour record created successfully',
+    onSuccess: () => fetchLabourData(),
+  });
+
+  const fetchLabourData = async (params?: any) => {
+    await fetchLabour(() => labourService.getLabour(params));
   };
 
   const createLabour = async (labourData: AddLabourFormData) => {
-    try {
-      setLoading(true);
-      await labourApi.create(labourData);
-      toast.success('Labour record created successfully');
-      await fetchLabours(); // Refresh the list
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create labour record');
-      toast.error('Failed to create labour record');
-      return false;
-    } finally {
-      setLoading(false);
-    }
+    await createLabourMutation(() => labourService.createLabour({
+      name: labourData.name,
+      mobileNumber: labourData.mobile,
+      address: labourData.address,
+      monthlySalary: labourData.monthlySalary,
+    }));
+    return true;
   };
 
   const updateLabour = async (labourId: string, labourData: AddLabourFormData) => {
-    try {
-      setLoading(true);
-      await labourApi.update(labourId, labourData);
-      toast.success('Labour record updated successfully');
-      await fetchLabours(); // Refresh the list
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update labour record');
-      toast.error('Failed to update labour record');
-      return false;
-    } finally {
-      setLoading(false);
-    }
+    await createLabourMutation(() => labourService.updateLabour(labourId, {
+      name: labourData.name,
+      mobileNumber: labourData.mobile,
+      address: labourData.address,
+      monthlySalary: labourData.monthlySalary,
+    }));
+    return true;
   };
 
   const deleteLabour = async (labourId: string) => {
-    try {
-      setLoading(true);
-      await labourApi.delete(labourId);
-      toast.success('Labour record deleted successfully');
-      await fetchLabours(); // Refresh the list
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete labour record');
-      toast.error('Failed to delete labour record');
-      return false;
-    } finally {
-      setLoading(false);
-    }
+    await createLabourMutation(() => labourService.deleteLabour(labourId));
+    return true;
   };
-
   useEffect(() => {
-    fetchLabours();
+    fetchLabourData();
   }, []);
 
   return {
-    labours,
+    labours: labourData?.labour || [],
     loading,
     error,
-    fetchLabours,
+    fetchLabours: fetchLabourData,
     createLabour,
     updateLabour,
     deleteLabour,

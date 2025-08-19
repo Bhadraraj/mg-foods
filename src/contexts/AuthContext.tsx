@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/api';
+import { authService } from '../services/api/auth';
 import { User, LoginCredentials, RegisterData } from '../types';
 
 let useToastHook: (() => { success: (title: string, message: string, duration?: number) => void; error: (title: string, message: string, duration?: number) => void; }) | null = null;

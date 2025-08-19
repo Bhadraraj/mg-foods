@@ -1,3 +1,10 @@
 export { authService } from './auth';
 export { userService } from './user';
-export { default as api } from '../api';
+export { categoryService } from './category';
+export { vendorService } from './vendor';
+export { itemService } from './item';
+export { customerService } from './customer';
+export { labourService } from './labour';
+export { rackService } from './rack';
+export { purchaseService } from './purchase';
+export { apiClient as api } from './base';

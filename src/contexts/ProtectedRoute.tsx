@@ -1,5 +1,4 @@
 import React from 'react';
-import { authService } from '../services/api';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
