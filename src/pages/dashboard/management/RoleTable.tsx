@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Role } from "../../../components/types/index";
+import { Role } from "../../../types/index";
 import { Search } from "lucide-react";
 
 interface RoleTableProps {
@@ -68,7 +68,7 @@ const RoleTable: React.FC<RoleTableProps> = ({ roles, onEditRole }) => {
                 scope="col"
                 className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Screens
+                Permissions
               </th>
               <th
                 scope="col"
@@ -85,35 +85,48 @@ const RoleTable: React.FC<RoleTableProps> = ({ roles, onEditRole }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredRoles.map((role) => (
-              <tr key={role.no}>
+            {filteredRoles.map((role, index) => (
+              <tr key={role.no || role._id || index}>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                  {role.no}
+                  {role.no || index + 1}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                   {role.roleName}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {role.screens.map((screen, screenIndex) => (
-                      <span
-                        key={screenIndex}
-                        className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
-                      >
-                        {screen.name}
-                      </span>
-                    ))}
+                    {/* Fixed: Check if permissions exists and is an array */}
+                    {role.permissions && Array.isArray(role.permissions) 
+                      ? role.permissions.map((permission, permissionIndex) => (
+                          <span
+                            key={permissionIndex}
+                            className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                          >
+                            {permission}
+                          </span>
+                        ))
+                      : role.screens && Array.isArray(role.screens)
+                      ? role.screens.map((screen, screenIndex) => (
+                          <span
+                            key={screenIndex}
+                            className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                          >
+                            {typeof screen === 'string' ? screen : screen.name}
+                          </span>
+                        ))
+                      : <span className="text-sm text-gray-500">No permissions</span>
+                    }
                   </div>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span
                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      role.status === "Active"
+                      role.status === "Active" || role.isActive
                         ? "bg-green-100 text-green-800"
                         : "bg-red-100 text-red-800"
                     }`}
                   >
-                    {role.status}
+                    {role.status || (role.isActive ? "Active" : "Inactive")}
                   </span>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">

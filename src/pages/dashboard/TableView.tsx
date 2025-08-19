@@ -349,23 +349,7 @@ const RestaurantManagementSystem: React.FC = () => {
         isOpen={isAddTableModalOpen}
         onClose={closeAddTableModal}
         onAddTable={handleAddTable}
-      />
-      {/* SalesSummary modal is not directly opened from this component
-          but is typically opened from within TableCard based on bill-generated status.
-          Ensure it's correctly placed where it's called. */}
-
-      {/* Debug info for development - remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 text-white p-3 rounded-lg text-xs max-w-sm">
-          <div className="mb-2 font-semibold">Table Split Debug Info:</div>
-          <div>Total tables: {tables.length}</div>
-          <div>Main tables: {tables.filter(t => !t.name.includes('-')).length}</div>
-          <div>Child tables: {tables.filter(t => t.name.includes('-')).length}</div>
-          <div className="mt-2 text-xs">
-            Child counters: {JSON.stringify(childTableCounters)}
-          </div>
-        </div>
-      )}
+      /> 
     </div>
   );
 };

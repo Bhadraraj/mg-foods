@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button, Input } from '../../ui';
 import { validateEmail } from '../../../utils/validation';
+import { useApiIntegration } from '../../hooks/useApiIntegration';
 
 interface LoginFormProps {
   onSubmit: (email: string, password: string) => Promise<void>;
@@ -13,6 +14,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, loading = false }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const { executeWithFeedback } = useApiIntegration();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +34,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, loading = false }) => {
     setErrors(newErrors);
     
     if (Object.keys(newErrors).length === 0) {
-      await onSubmit(email, password);
+      await executeWithFeedback(
+        () => onSubmit(email, password),
+        'Login successful!',
+        'Login failed. Please check your credentials.'
+      );
     }
   };
 

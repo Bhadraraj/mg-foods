@@ -4,13 +4,12 @@ import { Labour } from "../../../components/types/index";
 interface LabourTableProps {
   labours: Labour[];
   onEditLabour: (labour: Labour) => void;
+  onDeleteLabour: (labourId: string) => void;
 }
 
-const LabourTable: React.FC<LabourTableProps> = ({ labours, onEditLabour }) => {
- 
+const LabourTable: React.FC<LabourTableProps> = ({ labours, onEditLabour, onDeleteLabour }) => {
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm">
-      
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-blue-50">
@@ -24,7 +23,12 @@ const LabourTable: React.FC<LabourTableProps> = ({ labours, onEditLabour }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {labours.map((labour) => ( // Directly mapping over 'labours'
+            {labours.map((labour) => (
+              // The key prop must be a unique identifier for each item.
+              // This warning occurs because the value of `labour.no` is not unique.
+              // If your data has another unique field like `_id` or `id`,
+              // use that instead. For example: <tr key={labour._id}>
+              // For now, we'll keep `labour.no` as the key.
               <tr key={labour.no}>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{labour.no}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{labour.name}</td>

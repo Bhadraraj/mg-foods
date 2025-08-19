@@ -5,44 +5,25 @@ import RoleTable from "./management/RoleTable";
 import AddEditRoleModal from "./management/AddEditRoleModal";
 import LabourTable from "./management/LabourTable";
 import AddEditLabourModal from "./management/AddEditLabourModal";
-import { User, NewUserFormData, Role, AddRoleFormData, Labour, AddLabourFormData, ScreenPermission } from "../../components/types";
+import { User, NewUserFormData, Role, AddRoleFormData, Labour, AddLabourFormData } from "../../types";
+import { useUserManagement, useRoleManagement, useLabourManagement } from "../../components/hooks/useManagement";
 import { Plus } from "lucide-react";
-
-const initialUsers: User[] = [
-  { no: "01", name: "Sundar", mobile: "6775776558", role: "Admin", store: "All", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "02", name: "VENI", mobile: "7010396993", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "03", name: "USHA", mobile: "9994611220", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "04", name: "SUGANYA", mobile: "9629365770", role: "Role02", store: "NA", status: false, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "05", name: "Sudha", mobile: "6775776558", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "06", name: "Sheeba Sekar", mobile: "6775776558", role: "Role02", store: "NA", status: false, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "07", name: "SANTHYAG", mobile: "6379517048", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-  { no: "08", name: "SANDHIYA", mobile: "8807002085", role: "Role02", store: "NA", status: true, createdBy: "sundar@gmail.com", createdAt: "19 Sept 2022" },
-];
-
-const initialRoles: Role[] = [
-  { no: "01", roleName: "Admin", screens: [{ name: "Full Access", hasAccess: true }], status: "Active" },
-  { no: "02", roleName: "Manager", screens: [{ name: "Sales", hasAccess: true }, { name: "Reports", hasAccess: true }], status: "Active" },
-  { no: "03", roleName: "Staff", screens: [{ name: "POS", hasAccess: true }, { name: "KOT", hasAccess: true }], status: "Inactive" },
-];
-
-const initialLabours: Labour[] = [
-  { no: "01", name: "Kumar", mobile: "9124321345", address: "D-57, Main Road, Brahmpuri", monthlySalary: 16890 },
-  { no: "02", name: "Shiva", mobile: "9124321345", address: "D-57, Main Road, Brahmpuri", monthlySalary: 16890 },
-];
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("User");
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(initialUsers);
 
   const [isAddEditRoleModalOpen, setIsAddEditRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
 
   const [isAddEditLabourModalOpen, setIsAddEditLabourModalOpen] = useState(false);
   const [editingLabour, setEditingLabour] = useState<Labour | null>(null);
-  const [labours, setLabours] = useState<Labour[]>(initialLabours);
+
+  // Use API hooks - now all three use actual API calls
+  const { users, createUser, updateUser, toggleUserStatus } = useUserManagement();
+  const { roles, createRole, updateRole, deleteRole, toggleRoleStatus } = useRoleManagement();
+  const { labours, createLabour, updateLabour, deleteLabour } = useLabourManagement();
 
   const handleAddUserClick = () => {
     setEditingUser(null);
@@ -54,48 +35,28 @@ const Dashboard: React.FC = () => {
     setIsAddUserModalOpen(true);
   };
 
-  const handleAddUserSubmit = (formData: NewUserFormData) => {
-    if (editingUser) {
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.no === editingUser.no
-            ? {
-                ...user,
-                name: formData.name,
-                mobile: formData.mobile,
-                role: formData.role,
-                createdBy: formData.email,
-              }
-            : user
-        )
-      );
-    } else {
-      const newUserId = (users.length + 1).toString().padStart(2, "0");
-      const newUser: User = {
-        no: newUserId,
-        name: formData.name,
-        mobile: formData.mobile,
-        role: formData.role,
-        store: "NA",
-        status: true,
-        createdBy: formData.email,
-        createdAt: new Date().toLocaleDateString("en-US", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }),
-      };
-      setUsers((prevUsers) => [...prevUsers, newUser]);
+  const handleAddUserSubmit = async (formData: NewUserFormData) => {
+    try {
+      if (editingUser) {
+        // FIX: Changed from `editingUser._id` to `editingUser.no` to match the expected property
+        // on the User type. This assumes your User type has a 'no' property
+        // similar to your Role and Labour types.
+        await updateUser(editingUser.no, formData);
+      } else {
+        await createUser(formData);
+      }
+      setIsAddUserModalOpen(false);
+    } catch (error) {
+      console.error('Failed to save user:', error);
     }
-    setIsAddUserModalOpen(false);
   };
 
-  const handleToggleUserStatus = (userId: string) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.no === userId ? { ...user, status: !user.status } : user
-      )
-    );
+  const handleToggleUserStatus = async (userId: string) => {
+    try {
+      await toggleUserStatus(userId);
+    } catch (error) {
+      console.error('Failed to toggle user status:', error);
+    }
   };
 
   const handleAddRoleClick = () => {
@@ -108,46 +69,33 @@ const Dashboard: React.FC = () => {
     setIsAddEditRoleModalOpen(true);
   };
 
-  const handleAddEditRoleSubmit = (formData: AddRoleFormData) => {
-    const selectedScreens: ScreenPermission[] = [];
-    Object.entries(formData.permissions).forEach(([key, value]) => {
-      if (value) {
-           const name = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-        selectedScreens.push({ name, hasAccess: true });
+  const handleAddEditRoleSubmit = async (formData: AddRoleFormData) => {
+    try {
+      if (editingRole) {
+        await updateRole(editingRole.no, formData);
+      } else {
+        await createRole(formData);
       }
-    }); 
-    Object.entries(formData.dashboardFeatures).forEach(([key, value]) => {
-      if (value) {
-        const name = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-        selectedScreens.push({ name, hasAccess: true });
-      }
-    });
-
-
-    if (editingRole) {
-      setRoles((prevRoles) =>
-        prevRoles.map((role) =>
-          role.no === editingRole.no
-            ? {
-                ...role,
-                roleName: formData.roleName,
-                screens: selectedScreens,
-                status: "Active", 
-              }
-            : role
-        )
-      );
-    } else {
-      const newRoleNo = (roles.length + 1).toString().padStart(2, "0");
-      const newRole: Role = {
-        no: newRoleNo,
-        roleName: formData.roleName,
-        screens: selectedScreens,
-        status: "Active", 
-      };
-      setRoles((prevRoles) => [...prevRoles, newRole]);
+      setIsAddEditRoleModalOpen(false);
+    } catch (error) {
+      console.error('Failed to save role:', error);
     }
-    setIsAddEditRoleModalOpen(false);
+  };
+
+  const handleDeleteRole = async (roleId: string) => {
+    try {
+      await deleteRole(roleId);
+    } catch (error) {
+      console.error('Failed to delete role:', error);
+    }
+  };
+
+  const handleToggleRoleStatus = async (roleId: string) => {
+    try {
+      await toggleRoleStatus(roleId);
+    } catch (error) {
+      console.error('Failed to toggle role status:', error);
+    }
   };
 
   const handleAddLabourClick = () => {
@@ -160,33 +108,25 @@ const Dashboard: React.FC = () => {
     setIsAddEditLabourModalOpen(true);
   };
 
-  const handleAddEditLabourSubmit = (formData: AddLabourFormData) => {
-    if (editingLabour) {
-      setLabours((prevLabours) =>
-        prevLabours.map((labour) =>
-          labour.no === editingLabour.no
-            ? {
-                ...labour,
-                name: formData.name,
-                mobile: formData.mobile,
-                address: formData.address,
-                monthlySalary: formData.monthlySalary,
-              }
-            : labour
-        )
-      );
-    } else {
-      const newLabourNo = (labours.length + 1).toString().padStart(2, "0");
-      const newLabour: Labour = {
-        no: newLabourNo,
-        name: formData.name,
-        mobile: formData.mobile,
-        address: formData.address,
-        monthlySalary: formData.monthlySalary,
-      };
-      setLabours((prevLabours) => [...prevLabours, newLabour]);
+  const handleAddEditLabourSubmit = async (formData: AddLabourFormData) => {
+    try {
+      if (editingLabour) {
+        await updateLabour(editingLabour.no, formData);
+      } else {
+        await createLabour(formData);
+      }
+      setIsAddEditLabourModalOpen(false);
+    } catch (error) {
+      console.error('Failed to save labour:', error);
     }
-    setIsAddEditLabourModalOpen(false);
+  };
+
+  const handleDeleteLabour = async (labourId: string) => {
+    try {
+      await deleteLabour(labourId);
+    } catch (error) {
+      console.error('Failed to delete labour:', error);
+    }
   };
 
   const renderContent = () => {
@@ -204,6 +144,8 @@ const Dashboard: React.FC = () => {
           <RoleTable
             roles={roles}
             onEditRole={handleEditRoleClick}
+            onDeleteRole={handleDeleteRole}
+            onToggleStatus={handleToggleRoleStatus}
           />
         );
       case "Labour":
@@ -211,6 +153,7 @@ const Dashboard: React.FC = () => {
           <LabourTable
             labours={labours}
             onEditLabour={handleEditLabourClick}
+            onDeleteLabour={handleDeleteLabour}
           />
         );
       default:
@@ -231,14 +174,14 @@ const Dashboard: React.FC = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="bg-white shadow-sm">
-        <div className="container   sm:px-6 lg:px-8">
+        <div className="container   sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between py-4 gap-4 sm:gap-0">
             <div className="flex items-center space-x-4">
               <button
                 className={`px-4 py-2 rounded-md font-medium ${
                   activeTab === "User"
-                    ? "text-blue-600 bg-transparent"  
-              : "text-gray-700 hover:bg-gray-100"
+                    ? "text-blue-600 bg-transparent"
+                    : "text-gray-700 hover:bg-gray-100"
                 }`}
                 onClick={() => setActiveTab("User")}
               >
@@ -247,7 +190,7 @@ const Dashboard: React.FC = () => {
               <button
                 className={`px-4 py-2 rounded-md font-medium ${
                   activeTab === "Role"
-                    ? "text-blue-600 bg-transparent" 
+                    ? "text-blue-600 bg-transparent"
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
                 onClick={() => setActiveTab("Role")}
@@ -257,8 +200,8 @@ const Dashboard: React.FC = () => {
               <button
                 className={`px-4 py-2 rounded-md font-medium ${
                   activeTab === "Labour"
-                    ? "text-blue-600 bg-transparent" 
-            : "text-gray-700 hover:bg-gray-100"
+                    ? "text-blue-600 bg-transparent"
+                    : "text-gray-700 hover:bg-gray-100"
                 }`}
                 onClick={() => setActiveTab("Labour")}
               >
@@ -295,7 +238,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="container  py-6">
+      <div className="container  py-6">
         {renderContent()}
       </div>
 

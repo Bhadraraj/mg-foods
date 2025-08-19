@@ -2,6 +2,38 @@
 
 A comprehensive restaurant management system built with React, TypeScript, and Tailwind CSS.
 
+## API Integration
+
+This application is fully integrated with a REST API backend. The API integration includes:
+
+- **Authentication**: JWT-based authentication with automatic token refresh
+- **User Management**: Complete CRUD operations for users and roles
+- **Inventory Management**: Items, categories, vendors, and rack management
+- **Purchase Management**: Purchase orders, invoices, and stock entries
+- **Customer Management**: Customer data and relationship management
+- **Labour Management**: Employee records and attendance tracking
+
+### API Configuration
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Update the API URL in `.env`:
+   ```
+   VITE_API_URL=https://your-api-domain.com/api
+   ```
+
+### API Features
+
+- **Automatic Token Refresh**: Seamless token renewal without user intervention
+- **Error Handling**: Comprehensive error handling with user-friendly messages
+- **Loading States**: Proper loading indicators for all API operations
+- **Retry Logic**: Automatic retry for failed network requests
+- **File Uploads**: Support for image uploads with proper form data handling
+- **Type Safety**: Full TypeScript support for all API operations
+
 ## Project Structure
 
 ```
@@ -15,15 +47,38 @@ src/
 │   ├── forms/           # Form components
 │   ├── modals/          # Modal components
 │   └── hooks/           # Component-specific hooks
+├── config/              # Configuration files
+│   └── api.ts          # API configuration and endpoints
 ├── contexts/            # React contexts (Auth, Toast, etc.)
 ├── hooks/               # Global custom hooks
+│   ├── useApi.ts       # Generic API hook
+│   ├── useUsers.ts     # User management hook
+│   ├── useCategories.ts # Category management hook
+│   └── ...             # Other entity-specific hooks
 ├── pages/               # Page components
 │   ├── auth/           # Authentication pages
 │   └── dashboard/      # Dashboard pages
 ├── services/            # API services
-│   └── api/            # API service modules
+│   └── api/            # Modular API services
+│       ├── base.ts     # Base API client with interceptors
+│       ├── auth.ts     # Authentication service
+│       ├── user.ts     # User management service
+│       ├── category.ts # Category management service
+│       ├── vendor.ts   # Vendor management service
+│       ├── item.ts     # Item management service
+│       ├── customer.ts # Customer management service
+│       ├── labour.ts   # Labour management service
+│       ├── rack.ts     # Rack management service
+│       └── purchase.ts # Purchase management service
 ├── types/               # TypeScript type definitions
+│   ├── auth.ts         # Authentication types
+│   ├── management.ts   # User and role management types
+│   ├── inventory.ts    # Inventory-related types
+│   └── ...             # Other domain-specific types
 ├── utils/               # Utility functions
+│   ├── apiHelpers.ts   # API utility functions
+│   ├── validation.ts   # Form validation utilities
+│   └── formatters.ts   # Data formatting utilities
 ├── constants/           # Application constants
 └── styles/             # Global styles
 ```
@@ -57,6 +112,12 @@ src/
 - Formatting functions for display data
 - Helper functions for common operations
 
+### 6. API Integration
+- **Base API Client**: Centralized HTTP client with interceptors
+- **Service Modules**: Domain-specific API services
+- **Custom Hooks**: React hooks for API operations with loading states
+- **Error Handling**: Comprehensive error handling with user feedback
+- **Type Safety**: Full TypeScript support for all API operations
 ## Key Features
 
 - **Authentication & Authorization**: Role-based access control
@@ -84,6 +145,9 @@ src/
 1. Use the centralized API service layer
 2. Implement proper error handling
 3. Transform data at the service layer, not in components
+4. Use custom hooks for API operations
+5. Handle loading states consistently
+6. Provide user feedback for all operations
 
 ### Styling
 1. Use Tailwind CSS for styling
@@ -97,12 +161,18 @@ src/
    npm install
    ```
 
-2. Start the development server:
+2. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   # Update VITE_API_URL with your API endpoint
+   ```
+
+3. Start the development server:
    ```bash
    npm run dev
    ```
 
-3. Build for production:
+4. Build for production:
    ```bash
    npm run build
    ```
@@ -114,3 +184,5 @@ src/
 3. Create reusable components when possible
 4. Test your changes thoroughly
 5. Follow the existing code style and conventions
+6. Use the API integration patterns for all backend communication
+7. Implement proper error handling and loading states

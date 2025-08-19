@@ -1,4 +1,5 @@
-import api from '../api';
+import { apiClient } from './base';
+import { ENDPOINTS } from '../../config/api';
 import { User, NewUserFormData, ApiResponse } from '../../types';
 
 export interface UserFilters {
@@ -12,33 +13,26 @@ export interface UserFilters {
 
 export const userService = {
   async getUsers(filters: UserFilters = {}): Promise<ApiResponse<{ users: User[] }>> {
-    const response = await api.get<ApiResponse<{ users: User[] }>>('/users', {
-      params: filters,
-    });
-    return response.data;
+    return await apiClient.get<{ users: User[] }>(ENDPOINTS.USERS.BASE, { params: filters });
   },
 
   async getUser(id: string): Promise<ApiResponse<{ user: User }>> {
-    const response = await api.get<ApiResponse<{ user: User }>>(`/users/${id}`);
-    return response.data;
+    return await apiClient.get<{ user: User }>(ENDPOINTS.USERS.BY_ID(id));
   },
 
   async createUser(formData: NewUserFormData): Promise<ApiResponse<{ user: User }>> {
-    const response = await api.post<ApiResponse<{ user: User }>>('/users', formData);
-    return response.data;
+    return await apiClient.post<{ user: User }>(ENDPOINTS.USERS.BASE, formData);
   },
 
   async updateUser(id: string, formData: Partial<NewUserFormData>): Promise<ApiResponse<{ user: User }>> {
-    const response = await api.put<ApiResponse<{ user: User }>>(`/users/${id}`, formData);
-    return response.data;
+    return await apiClient.put<{ user: User }>(ENDPOINTS.USERS.BY_ID(id), formData);
   },
 
   async deleteUser(id: string): Promise<void> {
-    await api.delete(`/users/${id}`);
+    await apiClient.delete(ENDPOINTS.USERS.BY_ID(id));
   },
 
   async toggleUserStatus(id: string): Promise<ApiResponse<{ user: User }>> {
-    const response = await api.put<ApiResponse<{ user: User }>>(`/users/${id}/toggle-status`);
-    return response.data;
+    return await apiClient.put<{ user: User }>(ENDPOINTS.USERS.TOGGLE_STATUS(id));
   },
 };

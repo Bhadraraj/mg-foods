@@ -1,25 +1,43 @@
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message?: string;
+  data: T;
+  count?: number;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+
 export interface User {
-  no: string;
+  _id: string;
+  no: string; // For display purposes
   name: string;
+  email: string;
   mobile: string;
   role: string;
   store: string;
-  status: boolean;
-  createdBy: string;
-  createdAt: string;
-  _id?: string;
-  email?: string;
-  isActive?: boolean;
-  billType?: string;
+  billType: string;
   permissions?: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Role {
-  no: string;
+  _id: string;
+  no: string; // For display purposes
   roleName: string;
-  screens: ScreenPermission[];
-  status: string;
-  _id?: string;
+  permissions: string[];
+  screens: ScreenPermission[]; // For display in UI
+  status: string; // "Active" | "Inactive" - derived from isActive
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+
 }
 
 export interface ScreenPermission {
@@ -28,15 +46,23 @@ export interface ScreenPermission {
 }
 
 export interface Labour {
-  no: string;
+  _id: string;
+  no: string; // For display purposes
   name: string;
-  mobile: string;
+  mobileNumber: string;
   address: string;
   monthlySalary: number;
-  _id?: string;
+  isActive: boolean;
+  last7DaysStatus?: Array<{
+    date: string;
+    status: 'Present' | 'Absent' | 'Half Day' | 'Late' | 'Not Marked';
+  }>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface NewUserFormData {
+  _id: string;
   name: string;
   email: string;
   password: string;
@@ -46,36 +72,47 @@ export interface NewUserFormData {
   billType: string;
   permissions?: string[];
 }
+export interface AddLabourFormData {
+  name: string;
+  mobile: string;
+  address: string;
+  monthlySalary: number;
+}
+// export interface AddRoleFormData {
+//   roleName: string;
+//   permissions: {
+//     fullAccess: boolean;
+//     sales: boolean;
+//     kot: boolean;
+//     inventory: boolean;
+//     management: boolean;
+//     reports: boolean;
+//     expense: boolean;
+//     pos: boolean;
+//     dashboard: boolean;
+//     purchase: boolean;
+//     offer: boolean;
+//     item: boolean;
+//     approval: boolean;
+//     recipe: boolean;
+//     party: boolean;
+//   };
+//   dashboardFeatures: {
+//     overviewBox: boolean;
+//     paymentReminders: boolean;
+//     payables: boolean;
+//     recentTransaction: boolean;
+//     receivables: boolean;
+//     onlineOrders: boolean;
+//   };
+// }
+
 
 export interface AddRoleFormData {
   roleName: string;
-  permissions: {
-    fullAccess: boolean;
-    sales: boolean;
-    kot: boolean;
-    inventory: boolean;
-    management: boolean;
-    reports: boolean;
-    expense: boolean;
-    pos: boolean;
-    dashboard: boolean;
-    purchase: boolean;
-    offer: boolean;
-    item: boolean;
-    approval: boolean;
-    recipe: boolean;
-    party: boolean;
-  };
-  dashboardFeatures: {
-    overviewBox: boolean;
-    paymentReminders: boolean;
-    payables: boolean;
-    recentTransaction: boolean;
-    receivables: boolean;
-    onlineOrders: boolean;
-  };
+  permissions: Record<string, boolean>;
+  dashboardFeatures: Record<string, boolean>;
 }
-
 export interface AddLabourFormData {
   name: string;
   mobile: string;

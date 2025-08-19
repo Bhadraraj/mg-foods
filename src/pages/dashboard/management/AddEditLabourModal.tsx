@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AddLabourFormData, Labour } from "../../../components/types/index";
+import { AddLabourFormData, Labour } from "../../../types/index";
 
 interface AddEditLabourModalProps {
   isOpen: boolean;
@@ -16,29 +16,28 @@ const AddEditLabourModal: React.FC<AddEditLabourModalProps> = ({ isOpen, onClose
     monthlySalary: 0,
   });
 
-  useEffect(() => {
-    if (editingLabour) {
-      setFormData({
-        name: editingLabour.name,
-        mobile: editingLabour.mobile,
-        address: editingLabour.address,
-        monthlySalary: editingLabour.monthlySalary,
-      });
-    } else {
-      setFormData({
-        name: "",
-        mobile: "",
-        address: "",
-        monthlySalary: 0,
-      });
-    }
-  }, [isOpen, editingLabour]);
+  useEffect(() => { 
+    const initialFormData = editingLabour
+      ? {
+          name: editingLabour.name ?? "",
+          mobile: editingLabour.mobile ?? "",
+          address: editingLabour.address ?? "",
+          monthlySalary: editingLabour.monthlySalary ?? 0,
+        }
+      : {
+          name: "",
+          mobile: "",
+          address: "",
+          monthlySalary: 0,
+        };
+    setFormData(initialFormData);
+  }, [editingLabour]) 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "number" ? parseFloat(value) : value,
+      [name]: type === "number" && value !== "" ? parseFloat(value) : value,
     }));
   };
 

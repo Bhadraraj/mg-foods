@@ -57,10 +57,9 @@ const AddEditUserModal: React.FC<AddEditUserModalProps> = ({
 
   // Available roles (matching the existing data structure)
   const roles = [
-    { value: "Admin", label: "Admin", description: "Full system access" },
-    { value: "Manager", label: "Manager", description: "Store management access" },
-    { value: "Role02", label: "Staff", description: "Basic staff access" },
-    { value: "Cashier", label: "Cashier", description: "Point of sale access" },
+    { value: "admin", label: "Admin", description: "Full system access" },
+    { value: "manager", label: "Manager", description: "Store management access" },
+    { value: "cashier", label: "Staff", description: "Basic staff access" }, 
   ];
 
   // Available bill types
@@ -74,7 +73,7 @@ const AddEditUserModal: React.FC<AddEditUserModalProps> = ({
     if (editingUser) {
       setFormData({
         name: editingUser.name,
-        email: editingUser.createdBy, // Using createdBy as email field
+        email: editingUser.createdBy, 
         mobile: editingUser.mobile,
         role: editingUser.role,
         password: "",

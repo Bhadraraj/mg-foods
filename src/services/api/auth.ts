@@ -1,37 +1,35 @@
-import api from '../api';
+import { apiClient } from './base';
+import { ENDPOINTS } from '../../config/api';
 import { AuthResponse, LoginCredentials, RegisterData, User } from '../../types';
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
-    return response.data;
+    return await apiClient.post<AuthResponse>(ENDPOINTS.AUTH.LOGIN, credentials);
   },
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/register', data);
-    return response.data;
+    return await apiClient.post<AuthResponse>(ENDPOINTS.AUTH.REGISTER, data);
   },
 
   async logout(): Promise<void> {
-    await api.post('/auth/logout');
+    await apiClient.post(ENDPOINTS.AUTH.LOGOUT);
   },
 
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/refresh-token', { refreshToken });
-    return response.data;
+    return await apiClient.post<AuthResponse>(ENDPOINTS.AUTH.REFRESH_TOKEN, { refreshToken });
   },
 
   async getProfile(): Promise<{ user: User }> {
-    const response = await api.get<{ data: { user: User } }>('/auth/me');
-    return response.data.data;
+    const response = await apiClient.get<{ user: User }>(ENDPOINTS.AUTH.ME);
+    return response.data!;
   },
 
   async updateProfile(data: Partial<User>): Promise<{ user: User }> {
-    const response = await api.put<{ data: { user: User } }>('/auth/profile', data);
-    return response.data.data;
+    const response = await apiClient.put<{ user: User }>(ENDPOINTS.AUTH.UPDATE_PROFILE, data);
+    return response.data!;
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await api.put('/auth/change-password', { currentPassword, newPassword });
+    await apiClient.put(ENDPOINTS.AUTH.CHANGE_PASSWORD, { currentPassword, newPassword });
   },
 };
