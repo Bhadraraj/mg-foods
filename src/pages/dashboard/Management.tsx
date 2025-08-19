@@ -5,10 +5,27 @@ import RoleTable from "./management/RoleTable";
 import AddEditRoleModal from "./management/AddEditRoleModal";
 import LabourTable from "./management/LabourTable";
 import AddEditLabourModal from "./management/AddEditLabourModal";
+<<<<<<< HEAD
 import { User, NewUserFormData, Role, AddRoleFormData, Labour, AddLabourFormData } from "../../types";
 import { useUserManagement, useRoleManagement, useLabourManagement } from "../../components/hooks/useManagement";
 import { Plus } from "lucide-react";
 
+=======
+import { User, NewUserFormData, Role, AddRoleFormData, Labour, AddLabourFormData, ScreenPermission } from "../../types";
+import { useUsers } from "../../hooks/useUsers";
+import { useLabour } from "../../hooks/useLabour";
+import { useUserManagement, useLabourManagement } from "../../components/hooks/useManagement";
+import { Plus } from "lucide-react";
+
+
+const initialRoles: Role[] = [
+  { no: "01", roleName: "Admin", screens: [{ name: "Full Access", hasAccess: true }], status: "Active" },
+  { no: "02", roleName: "Manager", screens: [{ name: "Sales", hasAccess: true }, { name: "Reports", hasAccess: true }], status: "Active" },
+  { no: "03", roleName: "Staff", screens: [{ name: "POS", hasAccess: true }, { name: "KOT", hasAccess: true }], status: "Inactive" },
+];
+
+
+>>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("User");
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -19,12 +36,18 @@ const Dashboard: React.FC = () => {
 
   const [isAddEditLabourModalOpen, setIsAddEditLabourModalOpen] = useState(false);
   const [editingLabour, setEditingLabour] = useState<Labour | null>(null);
+<<<<<<< HEAD
 
   // Use API hooks - now all three use actual API calls
   const { users, createUser, updateUser, toggleUserStatus } = useUserManagement();
   const { roles, createRole, updateRole, deleteRole, toggleRoleStatus } = useRoleManagement();
   const { labours, createLabour, updateLabour, deleteLabour } = useLabourManagement();
+=======
+>>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
 
+  // Use API hooks
+  const { users, createUser, updateUser, toggleUserStatus } = useUserManagement();
+  const { labours, createLabour, updateLabour, deleteLabour } = useLabourManagement();
   const handleAddUserClick = () => {
     setEditingUser(null);
     setIsAddUserModalOpen(true);
@@ -35,6 +58,7 @@ const Dashboard: React.FC = () => {
     setIsAddUserModalOpen(true);
   };
 
+<<<<<<< HEAD
   const handleAddUserSubmit = async (formData: NewUserFormData) => {
     try {
       if (editingUser) {
@@ -48,15 +72,27 @@ const Dashboard: React.FC = () => {
       setIsAddUserModalOpen(false);
     } catch (error) {
       console.error('Failed to save user:', error);
+=======
+  const handleAddUserSubmit = (formData: NewUserFormData) => {
+    if (editingUser) {
+      updateUser(editingUser.no, formData);
+    } else {
+      createUser(formData);
+>>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
     }
   };
 
+<<<<<<< HEAD
   const handleToggleUserStatus = async (userId: string) => {
     try {
       await toggleUserStatus(userId);
     } catch (error) {
       console.error('Failed to toggle user status:', error);
     }
+=======
+  const handleToggleUserStatus = (userId: string) => {
+    toggleUserStatus(userId);
+>>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
   };
 
   const handleAddRoleClick = () => {
@@ -108,6 +144,7 @@ const Dashboard: React.FC = () => {
     setIsAddEditLabourModalOpen(true);
   };
 
+<<<<<<< HEAD
   const handleAddEditLabourSubmit = async (formData: AddLabourFormData) => {
     try {
       if (editingLabour) {
@@ -126,6 +163,13 @@ const Dashboard: React.FC = () => {
       await deleteLabour(labourId);
     } catch (error) {
       console.error('Failed to delete labour:', error);
+=======
+  const handleAddEditLabourSubmit = (formData: AddLabourFormData) => {
+    if (editingLabour) {
+      updateLabour(editingLabour.no, formData);
+    } else {
+      createLabour(formData);
+>>>>>>> bb12a49250642ac637069414b20cd477bd5fd447
     }
   };
 
