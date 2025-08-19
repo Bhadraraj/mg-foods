@@ -1,33 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '../services/api';
+import { User, LoginCredentials, RegisterData } from '../types';
 
 let useToastHook: (() => { success: (title: string, message: string, duration?: number) => void; error: (title: string, message: string, duration?: number) => void; }) | null = null;
 
 export const setToastHook = (hook: any) => {
   useToastHook = hook;
 };
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  permissions?: string[];
-  mobile?: string;
-  store?: string;
-  billType?: string;
-  isVerified: boolean;
-  isActive: boolean;
-}
-
-interface AuthResponse {
-  success: boolean;
-  message: string;
-  data: {
-    token: string;
-    refreshToken: string;
-    user: User;
-  };
-}
 
 interface AuthContextType {
   user: User | null;
@@ -43,17 +22,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-// API Configuration
-const API_BASE_URL = 'http://localhost:5000/api';
 
 // Safe toast functions
 const safeToast = {
@@ -110,18 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserProfile = async (authToken: string): Promise<User | null> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.data.user;
-      }
-      return null;
+      const data = await authService.getProfile();
+      return data.user;
     } catch (error) {
       console.error('Error fetching user profile:', error);
       return null;
@@ -130,15 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data: AuthResponse = await response.json();
+      const data = await authService.login({ email, password });
 
       if (data.success) {
         const { token: accessToken, refreshToken, user: userData } = data.data;
@@ -169,32 +119,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (
-    name: string, 
-    email: string, 
-    password: string, 
-    mobile?: string, 
-    role?: string, 
-    store?: string, 
+    name: string,
+    email: string,
+    password: string,
+    mobile?: string,
+    role?: string,
+    store?: string,
     billType?: string
   ): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          mobile,
-          role: role || 'cashier',
-          store: store || 'MG Food Court',
-          billType: billType || 'GST'
-        })
+      const data = await authService.register({
+        name,
+        email,
+        password,
+        mobile,
+        role: role || 'cashier',
+        store: store || 'MG Food Court',
+        billType: billType || 'GST'
       });
-
-      const data: AuthResponse = await response.json();
 
       if (data.success) {
         const { token: accessToken, refreshToken, user: userData } = data.data;
@@ -233,15 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ refreshToken: storedRefreshToken })
-      });
-
-      const data = await response.json();
+      const data = await authService.refreshToken(storedRefreshToken);
 
       if (data.success) {
         const { token: newToken, refreshToken: newRefreshToken } = data.data;
@@ -272,19 +206,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!token) return false;
 
-      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
+      const result = await authService.updateProfile(data);
 
-      const result = await response.json();
-
-      if (result.success) {
-        setUser(result.data.user);
+      if (result.user) {
+        setUser(result.user);
         safeToast.success('Profile Updated', 'Your profile has been updated successfully!');
         return true;
       }
@@ -301,23 +226,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!token) return false;
 
-      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ currentPassword, newPassword })
-      });
-
-      const result = await response.json();
+      await authService.changePassword(currentPassword, newPassword);
       
-      if (result.success) {
-        safeToast.success('Password Changed', 'Your password has been updated successfully!');
-      } else {
-        safeToast.error('Password Change Failed', result.message || 'Unable to change password.');
-      }
-      return result.success;
+      safeToast.success('Password Changed', 'Your password has been updated successfully!');
+      return true;
     } catch (error) {
       console.error('Password change error:', error);
       safeToast.error('Connection Error', 'Unable to connect to server. Please try again.');
@@ -328,13 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       if (token) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        await authService.logout();
       }
       
       safeToast.success('Logged Out', 'You have been successfully logged out.');

@@ -1,6 +1,8 @@
-import { useAuth } from "../contexts/AuthContext";
+import React, { useState } from "react";
+import { useAuth } from "../../../contexts/AuthContext";
 import { Menu, Bell, LogOut } from "lucide-react";
-import { useState } from "react";
+import { COMPANY_INFO } from "../../../constants/navigation";
+import { formatDateTime } from "../../../utils/formatters";
 
 interface TopbarProps {
   toggleSidebar: () => void;
@@ -9,16 +11,6 @@ interface TopbarProps {
 const Topbar: React.FC<TopbarProps> = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  const currentDate = new Date();
-  const formattedDate = `${currentDate.toLocaleString("en-US", {
-    weekday: "short",
-  })} ${currentDate.toLocaleString("en-US", {
-    month: "short",
-  })} ${currentDate.getDate()} ${currentDate.getFullYear()} ${currentDate.toLocaleTimeString(
-    "en-US",
-    { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }
-  )}`;
 
   const handleLogout = async () => {
     try {
@@ -30,6 +22,8 @@ const Topbar: React.FC<TopbarProps> = ({ toggleSidebar }) => {
       setIsLoggingOut(false);
     }
   };
+
+  const currentDateTime = formatDateTime(new Date());
 
   return (
     <header className="bg-blue-700 text-white shadow-md h-[100px]">
@@ -44,9 +38,9 @@ const Topbar: React.FC<TopbarProps> = ({ toggleSidebar }) => {
 
           <div className="ml-4">
             <div className="bg-white text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
-              2345 | MG Food Court
+              {COMPANY_INFO.id} | {COMPANY_INFO.name}
             </div>
-            <div className="text-xs mt-1">Last Sync at {formattedDate}</div>
+            <div className="text-xs mt-1">Last Sync at {currentDateTime}</div>
           </div>
         </div>
 
@@ -72,13 +66,10 @@ const Topbar: React.FC<TopbarProps> = ({ toggleSidebar }) => {
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex items-center space-x-2 px-3 py-2 rounded-md  hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-blue-700 transition-colors duration-200"
+            className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-blue-700 transition-colors duration-200"
             title="Logout"
           >
             <LogOut size={18} />
-            {/* <span className="text-sm font-medium">
-              {isLoggingOut ? "Logging out..." : "Logout"}
-            </span> */}
           </button>
         </div>
       </div>

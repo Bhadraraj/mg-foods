@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ProtectedRoute from "./contexts/ProtectedRoute";
-import MainLayout from "./layouts/MainLayout";
+import MainLayout from "./components/layout/MainLayout";
 import Overview from "./pages/dashboard/Overview";
 import Reports from "./pages/dashboard/Reports";
 import Sale from "./pages/dashboard/Sale";

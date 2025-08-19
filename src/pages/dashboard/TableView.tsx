@@ -4,14 +4,14 @@ import {
   Table,
   ParcelOrder,
   OrderData,
-  PaymentData, 
-} from "../../components/types"; 
+  PaymentData,
+} from "../../types";
 import {
-  TableGrid,
   ParcelCard,
   AddNewParcelCard,
 } from "../../components/CardsAndGrids";
-import SalesSummary from "../../components/modals/SalesSummary"; // Assuming this is used elsewhere
+import { TableGrid } from "../../components/grids";
+import { SalesSummary } from "../../components/modals";
 import OrderManagementModal from "../../components/modals/OrderManagementModal";
 import AddTableModal from "../../components/modals/AddTableModal";
 import TokenManagementView from "../../components/modals/TokenManagementView"; // Import the new Token view

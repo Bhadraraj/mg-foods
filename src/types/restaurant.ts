@@ -1,4 +1,3 @@
-// src/types.ts
 export interface Table {
   id: string;
   name: string;
@@ -17,7 +16,6 @@ export interface ParcelOrder {
   status: "available" | "occupied";
 }
 
- 
 export interface FoodItem {
   id: string;
   name: string;
@@ -25,15 +23,14 @@ export interface FoodItem {
   category: string;
   image?: string;
   currentStock?: number;
-  // New: Define a flexible variants structure
   variants?: {
-    type: "radio" | "image-radio" | "size"; // Add more types as needed
+    type: "radio" | "image-radio" | "size";
     label: string;
     options: Array<{
       value: string;
       label: string;
-      image?: string; // For image-radio type
-      priceAdjustment?: number; // Optional price adjustment for variants
+      image?: string;
+      priceAdjustment?: number;
     }>;
   }[];
 }
@@ -45,8 +42,8 @@ export interface OrderItem {
   amount: number;
   price: number;
   kot: string;
-  variant?: string; // New: To store selected variant
-  kotNote?: string; // New: To store KOT Note
+  variant?: string;
+  kotNote?: string;
 }
 
 export interface OrderData {
@@ -61,4 +58,26 @@ export interface CustomerDetails {
   name: string;
   mobile: string;
   type: "Individual" | "Business";
+}
+
+export interface PaymentData {
+  billNo: string;
+  tableNo: string;
+  date: string;
+  items: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    amount: number;
+  }>;
+  charges: {
+    service: number;
+    ac: number;
+    gst: number;
+    cgst: number;
+  };
+  waiterTip: number;
+  subTotal: number;
+  total: number;
+  grandTotal: number;
 }
