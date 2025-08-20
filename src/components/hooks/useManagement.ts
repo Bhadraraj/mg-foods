@@ -22,6 +22,7 @@ export const useUserManagement = () => {
   });
 
   const fetchRef = useRef<boolean>(false);
+  const lastFetchParams = useRef<string>('');
 
   const {
     data: usersData,
@@ -41,16 +42,23 @@ export const useUserManagement = () => {
   });
 
   const fetchUsersData = useCallback(async (customFilters?: any) => {
-    if (fetchRef.current) return;
+    const params = {
+      ...filters,
+      ...customFilters,
+      page: pagination.page,
+      limit: pagination.limit,
+    };
+    
+    const paramsKey = JSON.stringify(params);
+    
+    if (fetchRef.current || lastFetchParams.current === paramsKey) {
+      return;
+    }
+    
     fetchRef.current = true;
+    lastFetchParams.current = paramsKey;
 
     try {
-      const params = {
-        ...filters,
-        ...customFilters,
-        page: pagination.page,
-        limit: pagination.limit,
-      };
       const response = await fetchUsers(() => userService.getUsers(params));
       if (response?.pagination) {
         setPagination(response.pagination);
@@ -131,6 +139,7 @@ export const useRoleManagement = () => {
   });
 
   const fetchRef = useRef<boolean>(false);
+  const lastFetchParams = useRef<string>('');
 
   const {
     data: rolesData,
@@ -150,16 +159,23 @@ export const useRoleManagement = () => {
   });
 
   const fetchRolesData = useCallback(async (customFilters?: any) => {
-    if (fetchRef.current) return;
+    const params = {
+      ...filters,
+      ...customFilters,
+      page: pagination.page,
+      limit: pagination.limit,
+    };
+    
+    const paramsKey = JSON.stringify(params);
+    
+    if (fetchRef.current || lastFetchParams.current === paramsKey) {
+      return;
+    }
+    
     fetchRef.current = true;
+    lastFetchParams.current = paramsKey;
 
     try {
-      const params = {
-        ...filters,
-        ...customFilters,
-        page: pagination.page,
-        limit: pagination.limit,
-      };
       const response = await fetchRoles(() => roleService.getRoles(params));
       if (response?.pagination) {
         setPagination(response.pagination);
@@ -257,7 +273,7 @@ export const useRoleManagement = () => {
   }, [pagination.page, pagination.limit, filters]);
 
   return {
-    roles: rolesData?.roles || [],
+    roles: transformRoleData(rolesData?.roles || []),
     loading: loading || mutationLoading,
     error,
     pagination,
@@ -288,6 +304,7 @@ export const useLabourManagement = () => {
   });
 
   const fetchRef = useRef<boolean>(false);
+  const lastFetchParams = useRef<string>('');
 
   const {
     data: labourData,
@@ -307,16 +324,23 @@ export const useLabourManagement = () => {
   });
 
   const fetchLabourData = useCallback(async (customFilters?: any) => {
-    if (fetchRef.current) return;
+    const params = {
+      ...filters,
+      ...customFilters,
+      page: pagination.page,
+      limit: pagination.limit,
+    };
+    
+    const paramsKey = JSON.stringify(params);
+    
+    if (fetchRef.current || lastFetchParams.current === paramsKey) {
+      return;
+    }
+    
     fetchRef.current = true;
+    lastFetchParams.current = paramsKey;
 
     try {
-      const params = {
-        ...filters,
-        ...customFilters,
-        page: pagination.page,
-        limit: pagination.limit,
-      };
       const response = await fetchLabour(() => labourService.getLabour(params));
       if (response?.pagination) {
         setPagination(response.pagination);
@@ -371,7 +395,7 @@ export const useLabourManagement = () => {
   }, [pagination.page, pagination.limit, filters]);
 
   return {
-    labours: labourData?.labour || labourData?.labourRecords || [],
+    labours: transformLabourData(labourData?.labour || labourData?.labourRecords || []),
     loading: loading || mutationLoading,
     error,
     pagination,

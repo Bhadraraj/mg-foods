@@ -16,6 +16,7 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
 
   const { autoFetch = true, ...fetchOptions } = options;
   const fetchRef = useRef<boolean>(false);
+  const lastFetchParams = useRef<string>('');
 
   const {
     data: purchasesData,
@@ -59,17 +60,24 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
   });
 
   const fetchPurchasesData = useCallback(async (customOptions?: Partial<UsePurchasesOptions>) => {
-    if (fetchRef.current) return; // Prevent duplicate requests
+    const params = { 
+      ...fetchOptions, 
+      ...customOptions, 
+      page: pagination.page, 
+      limit: pagination.limit 
+    };
+    
+    const paramsKey = JSON.stringify(params);
+    
+    // Prevent duplicate requests with same parameters
+    if (fetchRef.current || lastFetchParams.current === paramsKey) {
+      return;
+    }
+    
     fetchRef.current = true;
+    lastFetchParams.current = paramsKey;
 
     try {
-      const params = { 
-        ...fetchOptions, 
-        ...customOptions, 
-        page: pagination.page, 
-        limit: pagination.limit 
-      };
-      
       const response = await fetchPurchases(() => purchaseService.getPurchases(params));
       
       if (response?.pagination) {

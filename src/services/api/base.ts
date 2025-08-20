@@ -27,6 +27,7 @@ class ApiClient {
   private instance: AxiosInstance;
   private retryCount = 0;
   private requestCache = new Map<string, Promise<any>>();
+  private pendingRequests = new Map<string, Promise<any>>();
 
   constructor() {
     this.instance = axios.create({
@@ -145,23 +146,23 @@ class ApiClient {
     return `${method}:${url}:${JSON.stringify(data || {})}`;
   }
 
-  // HTTP methods with caching for GET requests
+  // HTTP methods with duplicate request prevention
   async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const cacheKey = this.getCacheKey('GET', url, config?.params);
     
-    if (this.requestCache.has(cacheKey)) {
-      return this.requestCache.get(cacheKey);
+    if (this.pendingRequests.has(cacheKey)) {
+      return this.pendingRequests.get(cacheKey);
     }
 
     const request = this.instance.get<ApiResponse<T>>(url, config).then(response => {
-      this.requestCache.delete(cacheKey);
+      this.pendingRequests.delete(cacheKey);
       return response.data;
     }).catch(error => {
-      this.requestCache.delete(cacheKey);
+      this.pendingRequests.delete(cacheKey);
       throw error;
     });
 
-    this.requestCache.set(cacheKey, request);
+    this.pendingRequests.set(cacheKey, request);
     return request;
   }
 
