@@ -66,13 +66,13 @@ export const useRacks = (options: UseRacksOptions = {}) => {
   });
 
   const fetchRacksData = useCallback(async (customOptions?: Partial<UseRacksOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchRacks(() => rackService.getRacks(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchRacks]);
+  }, [fetchOptions, fetchRacks, pagination.page, pagination.limit]);
 
   const createRack = useCallback(async (data: CreateRackData): Promise<void> => {
     await createRackMutation(() => rackService.createRack(data));
@@ -98,11 +98,19 @@ export const useRacks = (options: UseRacksOptions = {}) => {
     await updateRackMutation(() => rackService.updateItemQuantity(rackId, itemId, quantity));
   }, [updateRackMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchRacksData();
     }
-  }, [fetchRacksData, autoFetch]);
+  }, [fetchRacksData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     racks: racksData?.racks || [],
@@ -116,6 +124,8 @@ export const useRacks = (options: UseRacksOptions = {}) => {
     addItemToRack,
     removeItemFromRack,
     updateItemQuantity,
+    handlePageChange,
+    handleItemsPerPageChange,
     createLoading,
     updateLoading,
     deleteLoading,

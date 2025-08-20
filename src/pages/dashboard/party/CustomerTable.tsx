@@ -1,24 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Customer } from '../../../components/types/';
+import { useCustomers } from '../../../hooks/useCustomers';
+import Pagination from '../../../components/ui/Pagination';
 
 interface CustomerTableProps {
-  customers: Customer[];
   onEditCustomer: (customer: Customer) => void;
   searchTerm: string; 
 }
 
-const CustomerTable: React.FC<CustomerTableProps> = ({ customers, onEditCustomer, searchTerm }) => {
+const CustomerTable: React.FC<CustomerTableProps> = ({ onEditCustomer, searchTerm }) => {
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phoneNumber.includes(searchTerm) ||
-    customer.gstNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.address.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const {
+    customers,
+    loading,
+    pagination,
+    handlePageChange,
+    handleItemsPerPageChange,
+    fetchCustomers
+  } = useCustomers({
+    search: localSearchTerm,
+    autoFetch: true
+  });
+
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+    fetchCustomers({ search: searchTerm });
+  }, [searchTerm, fetchCustomers]);
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
-      <table className="min-w-full divide-y divide-gray-200">
+    <div className="flex flex-col">
+      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+        {loading ? (
+          <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-blue-50">
           <tr>
             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SI No.</th>
@@ -32,7 +50,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ customers, onEditCustomer
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {filteredCustomers.map((customer, index) => (
+          {customers.map((customer, index) => (
             <tr key={customer.id}>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{customer.id}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{customer.customerName}</td>
@@ -50,6 +68,20 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ customers, onEditCustomer
           ))}
         </tbody>
       </table>
+        )}
+      </div>
+      {pagination.pages > 1 && (
+        <div className="mt-4">
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
+        </div>
+      )}
     </div>
   );
 };

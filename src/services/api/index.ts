@@ -4,6 +4,7 @@ export { categoryService } from './category';
 export { vendorService } from './vendor';
 export { itemService } from './item';
 export { customerService } from './customer';
+export { referrerService } from './referrer';
 export { labourService } from './labour';
 export { rackService } from './rack';
 export { purchaseService } from './purchase';

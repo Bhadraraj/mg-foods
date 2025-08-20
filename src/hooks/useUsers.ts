@@ -17,7 +17,6 @@ export const useUsers = (options: UseUsersOptions = {}) => {
 
   const { autoFetch = true, ...fetchOptions } = options;
 
-  // Use API hooks
   const {
     data: usersData,
     loading,
@@ -60,13 +59,13 @@ export const useUsers = (options: UseUsersOptions = {}) => {
   });
 
   const fetchUsersData = useCallback(async (customOptions?: Partial<UseUsersOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchUsers(() => userService.getUsers(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchUsers]);
+  }, [fetchOptions, fetchUsers, pagination.page, pagination.limit]);
 
   const createUser = useCallback(async (userData: NewUserFormData): Promise<void> => {
     await createUserMutation(() => userService.createUser(userData));
@@ -84,11 +83,19 @@ export const useUsers = (options: UseUsersOptions = {}) => {
     await toggleStatusMutation(() => userService.toggleUserStatus(id));
   }, [toggleStatusMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchUsersData();
     }
-  }, [fetchUsersData, autoFetch]);
+  }, [fetchUsersData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     users: usersData?.users || [],
@@ -100,7 +107,8 @@ export const useUsers = (options: UseUsersOptions = {}) => {
     updateUser,
     deleteUser,
     toggleUserStatus,
-    // Loading states for individual operations
+    handlePageChange,
+    handleItemsPerPageChange,
     createLoading,
     updateLoading,
     deleteLoading,

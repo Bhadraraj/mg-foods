@@ -1,6 +1,8 @@
 // CategoryListTable.tsx
-import React from 'react';
-import { Search } from 'lucide-react'; // Assuming you might want Search icon here too, or pass it from parent
+import React, { useState, useEffect } from 'react';
+import { Search } from 'lucide-react';
+import Pagination from '../../../../components/ui/Pagination';
+import { useCategories } from '../../../../hooks';
 
 // Interface for a Category item
 interface Category {
@@ -11,18 +13,49 @@ interface Category {
 
 // Props for the CategoryListTable component
 interface CategoryListTableProps {
-  categories: Category[]; // Array of category data
   onEditCategory: (category: Category) => void; // Function to handle editing a category
   onAddCategory: () => void; // Function to handle adding a new category
   onSearch: (searchTerm: string) => void; // Function to handle search in category list
 }
 
 const CategoryListTable: React.FC<CategoryListTableProps> = ({
-  categories,
   onEditCategory,
   onAddCategory,
   onSearch,
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Use the categories hook with pagination support
+  const {
+    categories: apiCategories,
+    loading,
+    pagination,
+    handlePageChange,
+    handleItemsPerPageChange,
+    fetchCategories
+  } = useCategories({
+    search: searchTerm,
+    autoFetch: true
+  });
+  
+  // Map API categories to the format expected by the component
+  const categories: Category[] = apiCategories.map((category, index) => ({
+    slNo: (index + 1).toString().padStart(2, '0'),
+    categoryName: category.name,
+    totalItems: category.itemCount || 0
+  }));
+  
+  // Handle search input changes
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    onSearch(value);
+  };
+  
+  // Refresh categories when search term changes
+  useEffect(() => {
+    fetchCategories({ search: searchTerm });
+  }, [searchTerm, fetchCategories]);
   return (
     <>
       {/* Search and Add Category for Category tab */}
@@ -32,7 +65,8 @@ const CategoryListTable: React.FC<CategoryListTableProps> = ({
             type="text"
             placeholder="Search by category name"
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
-            onChange={(e) => onSearch(e.target.value)}
+            value={searchTerm}
+            onChange={handleSearchChange}
           />
           <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
         </div>
@@ -87,6 +121,27 @@ const CategoryListTable: React.FC<CategoryListTableProps> = ({
           </tbody>
         </table>
       </div>
+      
+      {/* Pagination component */}
+      {pagination.pages > 1 && (
+        <div className="mt-4">
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
+        </div>
+      )}
+      
+      {/* Loading state */}
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+        </div>
+      )}
     </>
   );
 };

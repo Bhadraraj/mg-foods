@@ -56,6 +56,8 @@ export interface PurchaseFilters {
   paymentStatus?: 'pending' | 'partial' | 'paid';
   startDate?: string;
   endDate?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface CreatePurchaseData {

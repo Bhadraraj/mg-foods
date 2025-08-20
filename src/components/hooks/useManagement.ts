@@ -6,8 +6,21 @@ import { User, Role, Labour, NewUserFormData, AddRoleFormData, AddLabourFormData
 import { useApiMutation, useApiQuery } from '../../hooks/useApi';
 import { transformUserData, transformRoleData, transformLabourData, transformRoleFormData } from '../../utils/dataTransformers';
 
-// User Management Hook
+// User Management Hook with Pagination
 export const useUserManagement = () => {
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 0,
+  });
+
+  const [filters, setFilters] = useState({
+    search: '',
+    role: '',
+    status: undefined as boolean | undefined,
+  });
+
   const {
     data: usersData,
     loading,
@@ -25,8 +38,17 @@ export const useUserManagement = () => {
     onSuccess: () => fetchUsersData(),
   });
 
-  const fetchUsersData = async (params?: any) => {
-    await fetchUsers(() => userService.getUsers(params));
+  const fetchUsersData = async (customFilters?: any) => {
+    const params = {
+      ...filters,
+      ...customFilters,
+      page: pagination.page,
+      limit: pagination.limit,
+    };
+    const response = await fetchUsers(() => userService.getUsers(params));
+    if (response?.pagination) {
+      setPagination(response.pagination);
+    }
   };
 
   const createUser = async (userData: NewUserFormData) => {
@@ -49,24 +71,54 @@ export const useUserManagement = () => {
     return true;
   };
 
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
+  const handleItemsPerPageChange = (limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  };
+
+  const handleFiltersChange = (newFilters: any) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
   useEffect(() => {
     fetchUsersData();
-  }, []);
+  }, [pagination.page, pagination.limit, filters]);
 
   return {
     users: transformUserData(usersData?.users || []),
     loading: loading || mutationLoading,
     error,
+    pagination,
+    filters,
     fetchUsers: fetchUsersData,
     createUser,
     updateUser,
     deleteUser,
     toggleUserStatus,
+    handlePageChange,
+    handleItemsPerPageChange,
+    handleFiltersChange,
   };
 };
 
-// Role Management Hook
+// Role Management Hook with Pagination
 export const useRoleManagement = () => {
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 0,
+  });
+
+  const [filters, setFilters] = useState({
+    search: '',
+    status: undefined as boolean | undefined,
+  });
+
   const {
     data: rolesData,
     loading,
@@ -84,13 +136,21 @@ export const useRoleManagement = () => {
     onSuccess: () => fetchRolesData(),
   });
 
-  const fetchRolesData = async (params?: any) => {
-    await fetchRoles(() => roleService.getRoles(params));
+  const fetchRolesData = async (customFilters?: any) => {
+    const params = {
+      ...filters,
+      ...customFilters,
+      page: pagination.page,
+      limit: pagination.limit,
+    };
+    const response = await fetchRoles(() => roleService.getRoles(params));
+    if (response?.pagination) {
+      setPagination(response.pagination);
+    }
   };
 
   const createRole = async (roleData: AddRoleFormData) => {
     try {
-      // Convert permissions object to array
       const permissions: string[] = [];
       Object.entries(roleData.permissions).forEach(([key, value]) => {
         if (value) {
@@ -98,7 +158,6 @@ export const useRoleManagement = () => {
         }
       });
       
-      // Add dashboard features to permissions
       Object.entries(roleData.dashboardFeatures).forEach(([key, value]) => {
         if (value) {
           permissions.push(`dashboard.${key}`);
@@ -117,7 +176,6 @@ export const useRoleManagement = () => {
 
   const updateRole = async (roleId: string, roleData: AddRoleFormData) => {
     try {
-      // Convert permissions object to array
       const permissions: string[] = [];
       Object.entries(roleData.permissions).forEach(([key, value]) => {
         if (value) {
@@ -125,7 +183,6 @@ export const useRoleManagement = () => {
         }
       });
       
-      // Add dashboard features to permissions
       Object.entries(roleData.dashboardFeatures).forEach(([key, value]) => {
         if (value) {
           permissions.push(`dashboard.${key}`);
@@ -160,24 +217,54 @@ export const useRoleManagement = () => {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
+  const handleItemsPerPageChange = (limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  };
+
+  const handleFiltersChange = (newFilters: any) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
   useEffect(() => {
     fetchRolesData();
-  }, []);
+  }, [pagination.page, pagination.limit, filters]);
 
   return {
     roles: rolesData?.roles || [],
     loading: loading || mutationLoading,
     error,
+    pagination,
+    filters,
     fetchRoles: fetchRolesData,
     createRole,
     updateRole,
     deleteRole,
     toggleRoleStatus,
+    handlePageChange,
+    handleItemsPerPageChange,
+    handleFiltersChange,
   };
 };
 
-// Labour Management Hook
+// Labour Management Hook with Pagination
 export const useLabourManagement = () => {
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 0,
+  });
+
+  const [filters, setFilters] = useState({
+    search: '',
+    status: undefined as boolean | undefined,
+  });
+
   const {
     data: labourData,
     loading,
@@ -195,8 +282,17 @@ export const useLabourManagement = () => {
     onSuccess: () => fetchLabourData(),
   });
 
-  const fetchLabourData = async (params?: any) => {
-    await fetchLabour(() => labourService.getLabour(params));
+  const fetchLabourData = async (customFilters?: any) => {
+    const params = {
+      ...filters,
+      ...customFilters,
+      page: pagination.page,
+      limit: pagination.limit,
+    };
+    const response = await fetchLabour(() => labourService.getLabour(params));
+    if (response?.pagination) {
+      setPagination(response.pagination);
+    }
   };
 
   const createLabour = async (labourData: AddLabourFormData) => {
@@ -224,18 +320,35 @@ export const useLabourManagement = () => {
     return true;
   };
 
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
+  const handleItemsPerPageChange = (limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  };
+
+  const handleFiltersChange = (newFilters: any) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
   useEffect(() => {
     fetchLabourData();
-  }, []);
+  }, [pagination.page, pagination.limit, filters]);
 
   return {
-    // Handle both possible response structures from the API
     labours: labourData?.labour || labourData?.labourRecords || [],
     loading: loading || mutationLoading,
     error,
+    pagination,
+    filters,
     fetchLabours: fetchLabourData,
     createLabour,
     updateLabour,
     deleteLabour,
+    handlePageChange,
+    handleItemsPerPageChange,
+    handleFiltersChange,
   };
 };

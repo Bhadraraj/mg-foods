@@ -645,7 +645,6 @@ const ItemList: React.FC<ItemListProps> = ({ setShowNewItemForm }) => {
 
       {activeTab === "category" && (
         <CategoryListTable
-          categories={categories}
           onEditCategory={handleEditCategory}
           onAddCategory={handleAddCategory} // Pass the new handler
           onSearch={handleCategorySearch}

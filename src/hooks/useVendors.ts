@@ -50,13 +50,13 @@ export const useVendors = (options: UseVendorsOptions = {}) => {
   });
 
   const fetchVendorsData = useCallback(async (customOptions?: Partial<UseVendorsOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchVendors(() => vendorService.getVendors(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchVendors]);
+  }, [fetchOptions, fetchVendors, pagination.page, pagination.limit]);
 
   const createVendor = useCallback(async (data: CreateVendorData): Promise<void> => {
     await createVendorMutation(() => vendorService.createVendor(data));
@@ -70,11 +70,19 @@ export const useVendors = (options: UseVendorsOptions = {}) => {
     await deleteVendorMutation(() => vendorService.deleteVendor(id));
   }, [deleteVendorMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchVendorsData();
     }
-  }, [fetchVendorsData, autoFetch]);
+  }, [fetchVendorsData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     vendors: vendorsData?.vendors || [],
@@ -85,6 +93,8 @@ export const useVendors = (options: UseVendorsOptions = {}) => {
     createVendor,
     updateVendor,
     deleteVendor,
+    handlePageChange,
+    handleItemsPerPageChange,
     createLoading,
     updateLoading,
     deleteLoading,

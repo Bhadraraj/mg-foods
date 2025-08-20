@@ -9,6 +9,8 @@ export interface UserFilters {
   status?: boolean;
   store?: string;
   search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export const userService = {

@@ -50,13 +50,13 @@ export const useCustomers = (options: UseCustomersOptions = {}) => {
   });
 
   const fetchCustomersData = useCallback(async (customOptions?: Partial<UseCustomersOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchCustomers(() => customerService.getCustomers(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchCustomers]);
+  }, [fetchOptions, fetchCustomers, pagination.page, pagination.limit]);
 
   const createCustomer = useCallback(async (data: CreateCustomerData): Promise<void> => {
     await createCustomerMutation(() => customerService.createCustomer(data));
@@ -70,11 +70,19 @@ export const useCustomers = (options: UseCustomersOptions = {}) => {
     await deleteCustomerMutation(() => customerService.deleteCustomer(id));
   }, [deleteCustomerMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchCustomersData();
     }
-  }, [fetchCustomersData, autoFetch]);
+  }, [fetchCustomersData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     customers: customersData?.customers || [],
@@ -85,6 +93,8 @@ export const useCustomers = (options: UseCustomersOptions = {}) => {
     createCustomer,
     updateCustomer,
     deleteCustomer,
+    handlePageChange,
+    handleItemsPerPageChange,
     createLoading,
     updateLoading,
     deleteLoading,

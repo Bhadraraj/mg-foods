@@ -1,25 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Vendor } from '../../../components/types/';
+import { useVendors } from '../../../hooks/useVendors';
+import Pagination from '../../../components/ui/Pagination';
 
 interface VendorTableProps {
-  vendors: Vendor[];
   onEditVendor: (vendor: Vendor) => void;
   searchTerm: string;
 }
 
-const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEditVendor, searchTerm }) => {
+const VendorTable: React.FC<VendorTableProps> = ({ onEditVendor, searchTerm }) => {
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
-  const filteredVendors = vendors.filter(vendor =>
-    vendor.vendorNameCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.gstNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.phoneNumber.includes(searchTerm) ||
-    vendor.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.account.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const {
+    vendors,
+    loading,
+    pagination,
+    handlePageChange,
+    handleItemsPerPageChange,
+    fetchVendors
+  } = useVendors({
+    search: localSearchTerm,
+    autoFetch: true
+  });
+
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+    fetchVendors({ search: searchTerm });
+  }, [searchTerm, fetchVendors]);
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
-      <table className="min-w-full divide-y divide-gray-200">
+    <div className="flex flex-col">
+      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+        {loading ? (
+          <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-blue-50">
           <tr>
             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SI No.</th>
@@ -35,7 +52,7 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEditVendor, search
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {filteredVendors.map((vendor, index) => (
+          {vendors.map((vendor, index) => (
             <tr key={vendor.id}>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.id}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.vendorNameCode}</td>
@@ -55,6 +72,20 @@ const VendorTable: React.FC<VendorTableProps> = ({ vendors, onEditVendor, search
           ))}
         </tbody>
       </table>
+        )}
+      </div>
+      {pagination.pages > 1 && (
+        <div className="mt-4">
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
+        </div>
+      )}
     </div>
   );
 };

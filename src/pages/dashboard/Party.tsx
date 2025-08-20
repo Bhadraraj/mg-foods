@@ -304,25 +304,24 @@ const PartyManagement: React.FC = () => {
           >
             <Plus size={20} />
           </button>
-        </div>
+        </div> as JSX.Element
       </div> 
       {activeTab === 'customer' && (
         <CustomerTable
-          customers={customers}
           onEditCustomer={handleEditCustomer}
           searchTerm={searchTerm}
         />
       )}
       {activeTab === 'vendor' && (
         <VendorTable
-          vendors={vendors}
           onEditVendor={handleEditVendor}
+          
           searchTerm={searchTerm}
         />
+
       )}
       {activeTab === 'referrer' && (
         <ReferrerTable
-          referrers={referrers}
           onEditReferrer={handleEditReferrer}
           searchTerm={searchTerm}
         />
@@ -346,7 +345,6 @@ const PartyManagement: React.FC = () => {
           </div>
           {currentLabourSubTab === 'labour-list' ? (
             <LabourTable
-              labours={labours}
               onEditLabour={handleEditLabour}
               searchTerm={searchTerm}
             />

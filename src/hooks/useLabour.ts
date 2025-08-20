@@ -54,13 +54,13 @@ export const useLabour = (options: UseLabourOptions = {}) => {
   });
 
   const fetchLabourData = useCallback(async (customOptions?: Partial<UseLabourOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchLabour(() => labourService.getLabour(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchLabour]);
+  }, [fetchOptions, fetchLabour, pagination.page, pagination.limit]);
 
   const createLabour = useCallback(async (data: CreateLabourData): Promise<void> => {
     await createLabourMutation(() => labourService.createLabour(data));
@@ -74,11 +74,19 @@ export const useLabour = (options: UseLabourOptions = {}) => {
     await deleteLabourMutation(() => labourService.deleteLabour(id));
   }, [deleteLabourMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchLabourData();
     }
-  }, [fetchLabourData, autoFetch]);
+  }, [fetchLabourData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     labour: labourData?.labour || [],
@@ -89,6 +97,8 @@ export const useLabour = (options: UseLabourOptions = {}) => {
     createLabour,
     updateLabour,
     deleteLabour,
+    handlePageChange,
+    handleItemsPerPageChange,
     createLoading,
     updateLoading,
     deleteLoading,
@@ -131,13 +141,13 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
   });
 
   const fetchAttendanceData = useCallback(async (customOptions?: Partial<UseAttendanceOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchAttendance(() => labourService.getAttendanceRecords(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchAttendance]);
+  }, [fetchOptions, fetchAttendance, pagination.page, pagination.limit]);
 
   const markAttendance = useCallback(async (data: MarkAttendanceData): Promise<void> => {
     await markAttendanceMutation(() => labourService.markAttendance(data));
@@ -147,11 +157,19 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     await updateAttendanceMutation(() => labourService.updateAttendance(id, data));
   }, [updateAttendanceMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchAttendanceData();
     }
-  }, [fetchAttendanceData, autoFetch]);
+  }, [fetchAttendanceData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     attendance: attendanceData?.attendance || [],
@@ -161,6 +179,8 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     fetchAttendance: fetchAttendanceData,
     markAttendance,
     updateAttendance,
+    handlePageChange,
+    handleItemsPerPageChange,
     markLoading,
     updateLoading,
   };

@@ -12,6 +12,7 @@ export const useCategories = (options: UseCategoriesOptions = {}) => {
     limit: 20,
     total: 0,
     pages: 0,
+    
   });
 
   const { autoFetch = true, ...fetchOptions } = options;
@@ -50,13 +51,13 @@ export const useCategories = (options: UseCategoriesOptions = {}) => {
   });
 
   const fetchCategoriesData = useCallback(async (customOptions?: Partial<UseCategoriesOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchCategories(() => categoryService.getCategories(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchCategories]);
+  }, [fetchOptions, fetchCategories, pagination.page, pagination.limit]);
 
   const createCategory = useCallback(async (data: CreateCategoryData): Promise<void> => {
     await createCategoryMutation(() => categoryService.createCategory(data));
@@ -74,11 +75,19 @@ export const useCategories = (options: UseCategoriesOptions = {}) => {
     await createCategoryMutation(() => categoryService.assignItemsToCategory(id, { itemIds }));
   }, [createCategoryMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchCategoriesData();
     }
-  }, [fetchCategoriesData, autoFetch]);
+  }, [fetchCategoriesData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     categories: categoriesData?.categories || [],
@@ -90,6 +99,8 @@ export const useCategories = (options: UseCategoriesOptions = {}) => {
     updateCategory,
     deleteCategory,
     assignItemsToCategory,
+    handlePageChange,
+    handleItemsPerPageChange,
     createLoading,
     updateLoading,
     deleteLoading,

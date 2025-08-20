@@ -9,7 +9,7 @@ export interface ApiError {
   data?: any;
 }
 
-// Generic API response interface
+// Generic API response interface matching the documentation
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -55,7 +55,7 @@ class ApiClient {
     // Response interceptor
     this.instance.interceptors.response.use(
       (response) => {
-        this.retryCount = 0; // Reset retry count on successful response
+        this.retryCount = 0;
         return response;
       },
       async (error) => {
@@ -96,9 +96,9 @@ class ApiClient {
 
   private shouldRetry(error: any): boolean {
     return (
-      !error.response || // Network error
-      error.response.status >= 500 || // Server error
-      error.code === 'ECONNABORTED' // Timeout
+      !error.response ||
+      error.response.status >= 500 ||
+      error.code === 'ECONNABORTED'
     );
   }
 
@@ -108,7 +108,6 @@ class ApiClient {
 
   private handleError(error: any): ApiError {
     if (error.response) {
-      // Server responded with error status
       return {
         message: error.response.data?.message || 'Server error occurred',
         status: error.response.status,
@@ -116,13 +115,11 @@ class ApiClient {
         data: error.response.data,
       };
     } else if (error.request) {
-      // Network error
       return {
         message: 'Network error. Please check your connection.',
         code: 'NETWORK_ERROR',
       };
     } else {
-      // Other error
       return {
         message: error.message || 'An unexpected error occurred',
         code: 'UNKNOWN_ERROR',

@@ -50,13 +50,13 @@ export const useItems = (options: UseItemsOptions = {}) => {
   });
 
   const fetchItemsData = useCallback(async (customOptions?: Partial<UseItemsOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchItems(() => itemService.getItems(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchItems]);
+  }, [fetchOptions, fetchItems, pagination.page, pagination.limit]);
 
   const createItem = useCallback(async (data: CreateItemData): Promise<void> => {
     await createItemMutation(() => itemService.createItem(data));
@@ -70,11 +70,19 @@ export const useItems = (options: UseItemsOptions = {}) => {
     await deleteItemMutation(() => itemService.deleteItem(id));
   }, [deleteItemMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchItemsData();
     }
-  }, [fetchItemsData, autoFetch]);
+  }, [fetchItemsData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     items: itemsData?.items || [],
@@ -85,6 +93,8 @@ export const useItems = (options: UseItemsOptions = {}) => {
     createItem,
     updateItem,
     deleteItem,
+    handlePageChange,
+    handleItemsPerPageChange,
     createLoading,
     updateLoading,
     deleteLoading,

@@ -45,6 +45,8 @@ export interface ItemFilters {
   category?: string;
   brand?: string;
   status?: 'draft' | 'published' | 'inactive';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface CreateItemData {
@@ -88,14 +90,27 @@ export interface UpdateItemData {
 }
 
 export const itemService = {
+  /**
+   * Get all items with pagination support
+   * GET /items?page=1&limit=20&search=phone&category=cat_id&brand=brand_id&status=published
+   */
   async getItems(filters: ItemFilters = {}): Promise<ApiResponse<{ items: Item[] }>> {
     return await apiClient.get<{ items: Item[] }>(ENDPOINTS.ITEMS.BASE, { params: filters });
   },
 
+  /**
+   * Get a specific item by ID
+   * GET /items/:id
+   */
   async getItem(id: string): Promise<ApiResponse<{ item: Item }>> {
     return await apiClient.get<{ item: Item }>(ENDPOINTS.ITEMS.BY_ID(id));
   },
 
+  /**
+   * Create a new item with image upload support
+   * POST /items
+   * Content-Type: multipart/form-data
+   */
   async createItem(data: CreateItemData): Promise<ApiResponse<{ item: Item }>> {
     const formData = new FormData();
     
@@ -116,7 +131,7 @@ export const itemService = {
       formData.append('primaryImage', data.primaryImage);
     }
     if (data.additionalImages) {
-      data.additionalImages.forEach((file, index) => {
+      data.additionalImages.forEach((file) => {
         formData.append(`additionalImages`, file);
       });
     }
@@ -124,6 +139,11 @@ export const itemService = {
     return await apiClient.upload<{ item: Item }>(ENDPOINTS.ITEMS.BASE, formData);
   },
 
+  /**
+   * Update an existing item with image upload support
+   * PUT /items/:id
+   * Content-Type: multipart/form-data
+   */
   async updateItem(id: string, data: UpdateItemData): Promise<ApiResponse<{ item: Item }>> {
     const formData = new FormData();
     
@@ -150,7 +170,11 @@ export const itemService = {
     return await apiClient.upload<{ item: Item }>(ENDPOINTS.ITEMS.BY_ID(id), formData);
   },
 
-  async deleteItem(id: string): Promise<void> {
-    await apiClient.delete(ENDPOINTS.ITEMS.BY_ID(id));
+  /**
+   * Delete an item
+   * DELETE /items/:id
+   */
+  async deleteItem(id: string): Promise<ApiResponse<{ success: boolean }>> {
+    return await apiClient.delete<{ success: boolean }>(ENDPOINTS.ITEMS.BY_ID(id));
   },
 };

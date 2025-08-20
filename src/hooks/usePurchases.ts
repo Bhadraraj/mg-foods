@@ -58,13 +58,13 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
   });
 
   const fetchPurchasesData = useCallback(async (customOptions?: Partial<UsePurchasesOptions>) => {
-    const params = { ...fetchOptions, ...customOptions };
+    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
     const response = await fetchPurchases(() => purchaseService.getPurchases(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchPurchases]);
+  }, [fetchOptions, fetchPurchases, pagination.page, pagination.limit]);
 
   const createPurchase = useCallback(async (data: CreatePurchaseData): Promise<void> => {
     await createPurchaseMutation(() => purchaseService.createPurchase(data));
@@ -86,11 +86,19 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
     await deletePurchaseMutation(() => purchaseService.deletePurchase(id));
   }, [deletePurchaseMutation]);
 
+  const handlePageChange = useCallback((page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
+  }, []);
+
   useEffect(() => {
     if (autoFetch) {
       fetchPurchasesData();
     }
-  }, [fetchPurchasesData, autoFetch]);
+  }, [fetchPurchasesData, autoFetch, pagination.page, pagination.limit]);
 
   return {
     purchases: purchasesData?.purchases || [],
@@ -103,6 +111,8 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
     completePurchase,
     completeStockEntry,
     deletePurchase,
+    handlePageChange,
+    handleItemsPerPageChange,
     createLoading,
     updateStatusLoading,
     stockEntryLoading,

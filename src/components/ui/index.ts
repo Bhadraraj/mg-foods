@@ -4,3 +4,4 @@ export { default as Select } from './Select';
 export { default as Modal } from './Modal';
 export { default as LoadingSpinner } from '../LoadingSpinner';
 export { default as ApiStatus } from './ApiStatus';
+export { default as Pagination } from './Pagination';

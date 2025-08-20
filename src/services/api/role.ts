@@ -1,12 +1,14 @@
 import { apiClient } from './base';
 import { ENDPOINTS } from '../../config/api';
-import { Role, AddRoleFormData, ApiResponse } from '../../types';
+import { Role, ApiResponse } from '../../types';
 
 export interface RoleFilters {
   page?: number;
   limit?: number;
   status?: boolean;
   search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface CreateRoleData {

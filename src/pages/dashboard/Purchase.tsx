@@ -1,9 +1,13 @@
-import React, { useState } from "react";
-import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import NewPurchaseModal from "../../components/modals/NewPurchaseModal"; // Assuming this exists
-import FulfillmentModal from "../../components/modals/FulfillmentModal"; // Assuming this exists
-import VerificationModal from "../../components/modals/VerificationModal"; // Assuming this exists
-import AddProductToRackModal from "../../components/modals/AddProductToRack"; // Corrected import for the modal
+import React, { useState, useEffect } from "react";
+import { Search, Plus, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import NewPurchaseModal from "../../components/modals/NewPurchaseModal";
+import FulfillmentModal from "../../components/modals/FulfillmentModal";
+import VerificationModal from "../../components/modals/VerificationModal";
+import AddProductToRackModal from "../../components/modals/AddProductToRack";
+import { usePurchases } from "../../hooks/usePurchases";
+import { useAddProductToRack } from "../../hooks/useAddProductToRack";
+import Pagination from "../../components/ui/Pagination";
+import Spinner from "../../components/LoadingSpinner";
 
 // Updated PurchaseItem interface (ensure this is consistent with your types file)
 interface PurchaseItem {
@@ -12,11 +16,11 @@ interface PurchaseItem {
   customer: string;
   gst: string;
   purchaseOrder: {
-    status: "Progress" | "Completed" | "Pending"; // Added "Pending" for consistency
+    status: "Progress" | "Completed" | "Pending";
     type: "PO" | "PI" | "Invoice";
   }[];
   purchaseTotal: number;
-  paymentStatus: "Pending" | "In Progress" | "Completed" | "Paid"; // Added "Paid" as per image
+  paymentStatus: "Pending" | "In Progress" | "Completed" | "Paid";
   fulfillment: {
     type: "Fulfilment" | "Stock Entry";
     status: "Pending" | "Completed";
@@ -25,7 +29,6 @@ interface PurchaseItem {
   lastUpdatedBy: string;
   date: string;
   details?: {
-    // Added details for modals
     invoiceNo: string;
     invoiceDate: string;
     totalItems: number;
@@ -232,47 +235,13 @@ const Calendar: React.FC<CalendarProps> = ({ isOpen, onClose, onApply }) => {
 const PurchaseManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVendor, setSelectedVendor] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState(""); // New state for 'Choose Brand'
+  const [selectedBrand, setSelectedBrand] = useState("");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [dateRange, setDateRange] = useState({
     from: new Date(2024, 5, 10),
     to: new Date(2024, 6, 26),
   });
-
-  // --- START: AddProductToRackModal related state and handlers (MOVED HERE) ---
-  const [isAddProductToRackModalOpen, setIsAddProductToRackModalOpen] =
-    useState(false);
-  const [productToAddDetails, setProductToAddDetails] = useState<any | null>(
-    null
-  );
-
-  const handleOpenAddProductToRackModal = (details: any | null) => {
-    setProductToAddDetails(details); // Pass any initial data for edit mode
-    setIsAddProductToRackModalOpen(true);
-  };
-
-  const handleCloseAddProductToRackModal = () => {
-    setIsAddProductToRackModalOpen(false);
-    setProductToAddDetails(null); // Clear details when closing
-  };
-
-  const handleAddProductToRackSave = (productData: any) => {
-    console.log("Product data saved:", productData);
-    // Add your logic here to save the product to the rack (e.g., API call, update parent state)
-    console.log("Product added to rack successfully!"); // Using console.log instead of alert
-    setIsAddProductToRackModalOpen(false); // Close the modal after submission
-    setProductToAddDetails(null); // Clear details after submission/closing
-  };
-  // --- END: AddProductToRackModal related state and handlers ---
-
-  const [isNewPurchaseModalOpen, setIsNewPurchaseModalOpen] = useState(false);
-  const [isFulfillmentModalOpen, setIsFulfillmentModalOpen] = useState(false); // State for FulfillmentModal
-  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false); // State for VerificationModal
-  const [selectedPurchaseDetails, setSelectedPurchaseDetails] = useState<
-    PurchaseItem["details"] | null
-  >(null); // State for passing details to modals
-
-  const [purchaseData, setPurchaseData] = useState<PurchaseItem[]>([
+    const samplePurchaseData: PurchaseItem[] = [
     {
       id: "MUK192834930293B4",
       vendorName: "SS Marketing",
@@ -595,7 +564,83 @@ const PurchaseManagement: React.FC = () => {
         discount: 50.0,
       },
     },
-  ]);
+  ];
+
+  // Add the missing state declaration for purchaseData
+  const [purchaseData, setPurchaseData] = useState<PurchaseItem[]>(samplePurchaseData);
+
+  // Use the purchases hook for data fetching and pagination
+  const {
+    purchases,
+    loading,
+    error,
+    pagination,
+    fetchPurchases,
+    createPurchase,
+    updatePurchaseStatus,
+    completePurchase,
+    completeStockEntry,
+    deletePurchase,
+    handlePageChange,
+    handleItemsPerPageChange,
+    createLoading,
+    updateStatusLoading,
+    stockEntryLoading,
+    deleteLoading,
+  } = usePurchases({
+    vendor: selectedVendor || undefined,
+    startDate: dateRange.from.toISOString(),
+    endDate: dateRange.to.toISOString(),
+  });
+
+  // Use the add product to rack hook
+  const {
+    isModalOpen: isAddProductToRackModalOpen,
+    selectedProduct: productToAddDetails,
+    addingProductToRack,
+    openAddProductToRackModal: handleOpenAddProductToRackModal,
+    closeAddProductToRackModal: handleCloseAddProductToRackModal,
+    handleAddProductToRack: handleAddProductToRackSave,
+  } = useAddProductToRack();
+
+  // Filter purchases based on search term
+  const filteredPurchases = purchases.filter((purchase) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      purchase.id?.toLowerCase().includes(searchLower) ||
+      purchase.vendorName?.toLowerCase().includes(searchLower) ||
+      purchase.details?.invoiceNo?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const [isNewPurchaseModalOpen, setIsNewPurchaseModalOpen] = useState(false);
+  const [isFulfillmentModalOpen, setIsFulfillmentModalOpen] = useState(false); // State for FulfillmentModal
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false); // State for VerificationModal
+  const [selectedPurchaseDetails, setSelectedPurchaseDetails] = useState<
+    PurchaseItem["details"] | null
+  >(null); // State for passing details to modals
+
+  // Handlers for modals
+const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null = null) => {
+  setSelectedPurchaseDetails(itemDetails);
+  setIsNewPurchaseModalOpen(true);
+};
+  const handleCloseNewPurchaseModal = () => setIsNewPurchaseModalOpen(false);
+  
+  const handleOpenFulfillmentModal = (purchaseDetails: PurchaseItem["details"]) => {
+    setSelectedPurchaseDetails(purchaseDetails);
+    setIsFulfillmentModalOpen(true);
+  };
+  const handleCloseFulfillmentModal = () => setIsFulfillmentModalOpen(false);
+  
+  // const handleOpenVerificationModal = (purchaseDetails: PurchaseItem["details"]) => {
+  //   setSelectedPurchaseDetails(purchaseDetails);
+  //   setIsVerificationModalOpen(true);
+  // };
+  const handleCloseVerificationModal = () => setIsVerificationModalOpen(false);
+  
+
 
   const handleNewPurchaseSubmit = (data: any) => {
     console.log("New Purchase Data:", data);
@@ -667,19 +712,8 @@ const PurchaseManagement: React.FC = () => {
     );
   };
 
-  // Function to open NewPurchaseModal for adding (null initialData) or editing (with item.details)
-  const handleOpenNewPurchaseModal = (
-    itemDetails: PurchaseItem["details"] | null
-  ) => {
-    setSelectedPurchaseDetails(itemDetails);
-    setIsNewPurchaseModalOpen(true);
-  };
-
-  // Function to open FulfillmentModal (for a dedicated button/action)
-  const handleOpenFulfillmentModal = (itemDetails: PurchaseItem["details"]) => {
-    setSelectedPurchaseDetails(itemDetails);
-    setIsFulfillmentModalOpen(true);
-  };
+ 
+ 
 
   // Function to open VerificationModal (for fulfillment status clicks or a dedicated button)
   const handleOpenVerificationModal = (
@@ -777,44 +811,57 @@ const PurchaseManagement: React.FC = () => {
 
         {/* Main Table */}
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Purchase ID
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <div className="font-medium">Vendor name</div>
-                  <div className="font-medium">Customer</div>
-                  <div className="font-medium">GST</div>
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <div className="font-medium">Purchase Order</div>
-                  <div className="font-medium">Performa Invoice</div>
-                  <div className="font-medium">Invoice</div>
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Purchase total
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <div className="font-medium">Payment</div>
-                  <div className="font-medium">Status</div>
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fulfillment
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <div className="font-medium">Purchase date</div>
-                  <div className="font-medium">Last Updated date</div>
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <div className="font-medium">Created By</div>
-                  <div className="font-medium">Last Updated By</div>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPurchaseData.map((item) => (
+          {loading ? (
+            <div className="flex justify-center items-center py-10">
+              <Spinner size="lg" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-10 text-red-500">
+              Error loading purchases: {error.message}
+            </div>
+          ) : filteredPurchases.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              No purchases found. Try adjusting your filters or create a new purchase.
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Purchase ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="font-medium">Vendor name</div>
+                    <div className="font-medium">Customer</div>
+                    <div className="font-medium">GST</div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="font-medium">Purchase Order</div>
+                    <div className="font-medium">Performa Invoice</div>
+                    <div className="font-medium">Invoice</div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Purchase total
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="font-medium">Payment</div>
+                    <div className="font-medium">Status</div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fulfillment
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="font-medium">Purchase date</div>
+                    <div className="font-medium">Last Updated date</div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="font-medium">Created By</div>
+                    <div className="font-medium">Last Updated By</div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredPurchases.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {item.id}
@@ -979,7 +1026,38 @@ const PurchaseManagement: React.FC = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          )}
+          
+          {/* Pagination */}
+          {!loading && !error && filteredPurchases.length > 0 && (
+            <div className="mt-4 flex justify-between items-center px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+              <div className="flex items-center">
+                <select
+                  className="mr-2 border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  value={pagination.limit}
+                  onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                >
+                  <option value="10">10 per page</option>
+                  <option value="20">20 per page</option>
+                  <option value="50">50 per page</option>
+                </select>
+                <span className="text-sm text-gray-700">
+                  Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
+                  <span className="font-medium">
+                    {Math.min(pagination.page * pagination.limit, pagination.totalItems)}
+                  </span>{" "}
+                  of <span className="font-medium">{pagination.totalItems}</span> results
+                </span>
+              </div>
+              
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={Math.ceil(pagination.totalItems / pagination.limit)}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -990,47 +1068,67 @@ const PurchaseManagement: React.FC = () => {
         onClose={() => setIsCalendarOpen(false)}
         onApply={handleDateRangeApply}
       />
-      {/* NewPurchaseModal for adding/editing */}
-      <NewPurchaseModal
-        isOpen={isNewPurchaseModalOpen}
-        onClose={() => {
-          setIsNewPurchaseModalOpen(false);
-          setSelectedPurchaseDetails(null); // Clear selected details on close
-        }}
-        onSubmit={handleNewPurchaseSubmit}
-        initialData={selectedPurchaseDetails} // Pass initial data for editing
-      />
-      {/* FulfillmentModal */}
-      {selectedPurchaseDetails && ( // Only render if details are available
-        <FulfillmentModal
-          isOpen={isFulfillmentModalOpen}
-          onClose={() => {
-            setIsFulfillmentModalOpen(false);
-            setSelectedPurchaseDetails(null); // Clear selected details on close
+      
+      {/* New Purchase Modal */}
+      {isNewPurchaseModalOpen && (
+        <NewPurchaseModal
+          isOpen={isNewPurchaseModalOpen}
+          onClose={handleCloseNewPurchaseModal}
+          onSave={(purchaseData) => {
+            createPurchase(purchaseData);
+            handleCloseNewPurchaseModal();
           }}
-          purchaseDetails={selectedPurchaseDetails}
-        />
-      )}
-      {/* VerificationModal */}
-      {selectedPurchaseDetails && ( // Only render if details are available
-        <VerificationModal
-          isOpen={isVerificationModalOpen}
-          onClose={() => {
-            setIsVerificationModalOpen(false);
-            setSelectedPurchaseDetails(null); // Clear selected details on close
-          }}
-          purchaseDetails={selectedPurchaseDetails}
+          initialData={selectedPurchaseDetails}
         />
       )}
 
-      {/* AddProductToRackModal is now correctly rendered here */}
+      {/* Fulfillment Modal */}
+      {isFulfillmentModalOpen && selectedPurchaseDetails && (
+        <FulfillmentModal
+          isOpen={isFulfillmentModalOpen}
+          onClose={handleCloseFulfillmentModal}
+          purchaseDetails={selectedPurchaseDetails}
+          onSave={(fulfillmentData) => {
+            completePurchase(fulfillmentData);
+            handleCloseFulfillmentModal();
+          }}
+        />
+      )}
+
+      {/* Verification Modal */}
+      {isVerificationModalOpen && selectedPurchaseDetails && (
+        <VerificationModal
+          isOpen={isVerificationModalOpen}
+          onClose={handleCloseVerificationModal}
+          purchaseDetails={selectedPurchaseDetails}
+          onSave={(verificationData) => {
+            updatePurchaseStatus(verificationData);
+            handleCloseVerificationModal();
+          }}
+        />
+      )}
+
+      {/* Add Product To Rack Modal */}
       {isAddProductToRackModalOpen && (
         <AddProductToRackModal
           isOpen={isAddProductToRackModalOpen}
           onClose={handleCloseAddProductToRackModal}
-          onSave={handleAddProductToRackSave}
+          onSave={(productsData) => {
+            // Transform the data to match the API format
+            if (productsData.length > 0 && productsData[0].tempId) {
+              const rackAssignments = productsData[0].rackQuantities.map(rq => ({
+                rack: rq.rackId,
+                quantity: rq.quantity
+              }));
+              
+              handleAddProductToRackSave({
+                itemId: productsData[0].tempId,
+                rackAssignments
+              });
+            }
+          }}
           initialData={productToAddDetails}
-          mode="add" // Or "edit" if you build that logic
+          mode="edit"
         />
       )}
     </div>

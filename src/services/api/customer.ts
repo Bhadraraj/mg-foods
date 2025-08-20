@@ -23,6 +23,8 @@ export interface CustomerFilters {
   search?: string;
   status?: boolean;
   location?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface CreateCustomerData {
@@ -48,23 +50,43 @@ export interface UpdateCustomerData {
 }
 
 export const customerService = {
+  /**
+   * Get all customers with pagination support
+   * GET /customers?page=1&limit=20&search=john&status=true
+   */
   async getCustomers(filters: CustomerFilters = {}): Promise<ApiResponse<{ customers: Customer[] }>> {
     return await apiClient.get<{ customers: Customer[] }>(ENDPOINTS.CUSTOMERS.BASE, { params: filters });
   },
 
+  /**
+   * Get a specific customer by ID
+   * GET /customers/:id
+   */
   async getCustomer(id: string): Promise<ApiResponse<{ customer: Customer }>> {
     return await apiClient.get<{ customer: Customer }>(ENDPOINTS.CUSTOMERS.BY_ID(id));
   },
 
+  /**
+   * Create a new customer
+   * POST /customers
+   */
   async createCustomer(data: CreateCustomerData): Promise<ApiResponse<{ customer: Customer }>> {
     return await apiClient.post<{ customer: Customer }>(ENDPOINTS.CUSTOMERS.BASE, data);
   },
 
+  /**
+   * Update an existing customer
+   * PUT /customers/:id
+   */
   async updateCustomer(id: string, data: UpdateCustomerData): Promise<ApiResponse<{ customer: Customer }>> {
     return await apiClient.put<{ customer: Customer }>(ENDPOINTS.CUSTOMERS.BY_ID(id), data);
   },
 
-  async deleteCustomer(id: string): Promise<void> {
-    await apiClient.delete(ENDPOINTS.CUSTOMERS.BY_ID(id));
+  /**
+   * Delete a customer
+   * DELETE /customers/:id
+   */
+  async deleteCustomer(id: string): Promise<ApiResponse<{ success: boolean }>> {
+    return await apiClient.delete<{ success: boolean }>(ENDPOINTS.CUSTOMERS.BY_ID(id));
   },
 };
