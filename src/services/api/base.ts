@@ -26,6 +26,7 @@ export interface ApiResponse<T = any> {
 class ApiClient {
   private instance: AxiosInstance;
   private retryCount = 0;
+  private requestCache = new Map<string, Promise<any>>();
 
   constructor() {
     this.instance = axios.create({
@@ -139,10 +140,29 @@ class ApiClient {
     return response.data;
   }
 
-  // HTTP methods
+  // Prevent duplicate requests
+  private getCacheKey(method: string, url: string, data?: any): string {
+    return `${method}:${url}:${JSON.stringify(data || {})}`;
+  }
+
+  // HTTP methods with caching for GET requests
   async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.instance.get<ApiResponse<T>>(url, config);
-    return response.data;
+    const cacheKey = this.getCacheKey('GET', url, config?.params);
+    
+    if (this.requestCache.has(cacheKey)) {
+      return this.requestCache.get(cacheKey);
+    }
+
+    const request = this.instance.get<ApiResponse<T>>(url, config).then(response => {
+      this.requestCache.delete(cacheKey);
+      return response.data;
+    }).catch(error => {
+      this.requestCache.delete(cacheKey);
+      throw error;
+    });
+
+    this.requestCache.set(cacheKey, request);
+    return request;
   }
 
   async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {

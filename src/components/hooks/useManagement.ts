@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { userService } from '../../services/api/user';
 import { roleService } from '../../services/api/role';
 import { labourService } from '../../services/api/labour';
@@ -21,6 +21,8 @@ export const useUserManagement = () => {
     status: undefined as boolean | undefined,
   });
 
+  const fetchRef = useRef<boolean>(false);
+
   const {
     data: usersData,
     loading,
@@ -38,18 +40,25 @@ export const useUserManagement = () => {
     onSuccess: () => fetchUsersData(),
   });
 
-  const fetchUsersData = async (customFilters?: any) => {
-    const params = {
-      ...filters,
-      ...customFilters,
-      page: pagination.page,
-      limit: pagination.limit,
-    };
-    const response = await fetchUsers(() => userService.getUsers(params));
-    if (response?.pagination) {
-      setPagination(response.pagination);
+  const fetchUsersData = useCallback(async (customFilters?: any) => {
+    if (fetchRef.current) return;
+    fetchRef.current = true;
+
+    try {
+      const params = {
+        ...filters,
+        ...customFilters,
+        page: pagination.page,
+        limit: pagination.limit,
+      };
+      const response = await fetchUsers(() => userService.getUsers(params));
+      if (response?.pagination) {
+        setPagination(response.pagination);
+      }
+    } finally {
+      fetchRef.current = false;
     }
-  };
+  }, [filters, fetchUsers, pagination.page, pagination.limit]);
 
   const createUser = async (userData: NewUserFormData) => {
     await userMutation(() => userService.createUser(userData));
@@ -85,7 +94,9 @@ export const useUserManagement = () => {
   };
 
   useEffect(() => {
-    fetchUsersData();
+    if (!fetchRef.current) {
+      fetchUsersData();
+    }
   }, [pagination.page, pagination.limit, filters]);
 
   return {
@@ -119,6 +130,8 @@ export const useRoleManagement = () => {
     status: undefined as boolean | undefined,
   });
 
+  const fetchRef = useRef<boolean>(false);
+
   const {
     data: rolesData,
     loading,
@@ -136,18 +149,25 @@ export const useRoleManagement = () => {
     onSuccess: () => fetchRolesData(),
   });
 
-  const fetchRolesData = async (customFilters?: any) => {
-    const params = {
-      ...filters,
-      ...customFilters,
-      page: pagination.page,
-      limit: pagination.limit,
-    };
-    const response = await fetchRoles(() => roleService.getRoles(params));
-    if (response?.pagination) {
-      setPagination(response.pagination);
+  const fetchRolesData = useCallback(async (customFilters?: any) => {
+    if (fetchRef.current) return;
+    fetchRef.current = true;
+
+    try {
+      const params = {
+        ...filters,
+        ...customFilters,
+        page: pagination.page,
+        limit: pagination.limit,
+      };
+      const response = await fetchRoles(() => roleService.getRoles(params));
+      if (response?.pagination) {
+        setPagination(response.pagination);
+      }
+    } finally {
+      fetchRef.current = false;
     }
-  };
+  }, [filters, fetchRoles, pagination.page, pagination.limit]);
 
   const createRole = async (roleData: AddRoleFormData) => {
     try {
@@ -231,7 +251,9 @@ export const useRoleManagement = () => {
   };
 
   useEffect(() => {
-    fetchRolesData();
+    if (!fetchRef.current) {
+      fetchRolesData();
+    }
   }, [pagination.page, pagination.limit, filters]);
 
   return {
@@ -265,6 +287,8 @@ export const useLabourManagement = () => {
     status: undefined as boolean | undefined,
   });
 
+  const fetchRef = useRef<boolean>(false);
+
   const {
     data: labourData,
     loading,
@@ -282,18 +306,25 @@ export const useLabourManagement = () => {
     onSuccess: () => fetchLabourData(),
   });
 
-  const fetchLabourData = async (customFilters?: any) => {
-    const params = {
-      ...filters,
-      ...customFilters,
-      page: pagination.page,
-      limit: pagination.limit,
-    };
-    const response = await fetchLabour(() => labourService.getLabour(params));
-    if (response?.pagination) {
-      setPagination(response.pagination);
+  const fetchLabourData = useCallback(async (customFilters?: any) => {
+    if (fetchRef.current) return;
+    fetchRef.current = true;
+
+    try {
+      const params = {
+        ...filters,
+        ...customFilters,
+        page: pagination.page,
+        limit: pagination.limit,
+      };
+      const response = await fetchLabour(() => labourService.getLabour(params));
+      if (response?.pagination) {
+        setPagination(response.pagination);
+      }
+    } finally {
+      fetchRef.current = false;
     }
-  };
+  }, [filters, fetchLabour, pagination.page, pagination.limit]);
 
   const createLabour = async (labourData: AddLabourFormData) => {
     await labourMutation(() => labourService.createLabour({
@@ -334,7 +365,9 @@ export const useLabourManagement = () => {
   };
 
   useEffect(() => {
-    fetchLabourData();
+    if (!fetchRef.current) {
+      fetchLabourData();
+    }
   }, [pagination.page, pagination.limit, filters]);
 
   return {

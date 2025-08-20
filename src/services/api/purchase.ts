@@ -3,6 +3,7 @@ import { ENDPOINTS } from '../../config/api';
 import { ApiResponse } from '../../types';
 
 export interface Purchase {
+  _id: string;
   id: string;
   vendor: string;
   invoiceNo: string;

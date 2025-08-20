@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { purchaseService, Purchase, PurchaseFilters, CreatePurchaseData, UpdatePurchaseStatusData, StockEntryData } from '../services/api/purchase';
 import { useApiQuery, useApiMutation } from './useApi';
 
@@ -15,6 +15,7 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
   });
 
   const { autoFetch = true, ...fetchOptions } = options;
+  const fetchRef = useRef<boolean>(false);
 
   const {
     data: purchasesData,
@@ -58,11 +59,24 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
   });
 
   const fetchPurchasesData = useCallback(async (customOptions?: Partial<UsePurchasesOptions>) => {
-    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
-    const response = await fetchPurchases(() => purchaseService.getPurchases(params));
-    
-    if (response?.pagination) {
-      setPagination(response.pagination);
+    if (fetchRef.current) return; // Prevent duplicate requests
+    fetchRef.current = true;
+
+    try {
+      const params = { 
+        ...fetchOptions, 
+        ...customOptions, 
+        page: pagination.page, 
+        limit: pagination.limit 
+      };
+      
+      const response = await fetchPurchases(() => purchaseService.getPurchases(params));
+      
+      if (response?.pagination) {
+        setPagination(response.pagination);
+      }
+    } finally {
+      fetchRef.current = false;
     }
   }, [fetchOptions, fetchPurchases, pagination.page, pagination.limit]);
 
@@ -95,7 +109,7 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
   }, []);
 
   useEffect(() => {
-    if (autoFetch) {
+    if (autoFetch && !fetchRef.current) {
       fetchPurchasesData();
     }
   }, [fetchPurchasesData, autoFetch, pagination.page, pagination.limit]);

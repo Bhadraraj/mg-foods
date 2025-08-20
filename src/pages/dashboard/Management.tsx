@@ -21,9 +21,39 @@ const Dashboard: React.FC = () => {
   const [editingLabour, setEditingLabour] = useState<Labour | null>(null);
 
   // Use API hooks - now all three use actual API calls
-  const { users, createUser, updateUser, toggleUserStatus } = useUserManagement();
-  const { roles, createRole, updateRole, deleteRole, toggleRoleStatus } = useRoleManagement();
-  const { labours, createLabour, updateLabour, deleteLabour } = useLabourManagement();
+  const { 
+    users, 
+    createUser, 
+    updateUser, 
+    toggleUserStatus,
+    loading: usersLoading,
+    pagination: usersPagination,
+    handlePageChange: handleUsersPageChange,
+    handleItemsPerPageChange: handleUsersItemsPerPageChange
+  } = useUserManagement();
+
+  const { 
+    roles, 
+    createRole, 
+    updateRole, 
+    deleteRole, 
+    toggleRoleStatus,
+    loading: rolesLoading,
+    pagination: rolesPagination,
+    handlePageChange: handleRolesPageChange,
+    handleItemsPerPageChange: handleRolesItemsPerPageChange
+  } = useRoleManagement();
+
+  const { 
+    labours, 
+    createLabour, 
+    updateLabour, 
+    deleteLabour,
+    loading: laboursLoading,
+    pagination: laboursPagination,
+    handlePageChange: handleLaboursPageChange,
+    handleItemsPerPageChange: handleLaboursItemsPerPageChange
+  } = useLabourManagement();
 
   const handleAddUserClick = () => {
     setEditingUser(null);
@@ -38,10 +68,7 @@ const Dashboard: React.FC = () => {
   const handleAddUserSubmit = async (formData: NewUserFormData) => {
     try {
       if (editingUser) {
-        // FIX: Changed from `editingUser._id` to `editingUser.no` to match the expected property
-        // on the User type. This assumes your User type has a 'no' property
-        // similar to your Role and Labour types.
-        await updateUser(editingUser.no, formData);
+        await updateUser(editingUser._id || editingUser.no, formData);
       } else {
         await createUser(formData);
       }
@@ -72,7 +99,7 @@ const Dashboard: React.FC = () => {
   const handleAddEditRoleSubmit = async (formData: AddRoleFormData) => {
     try {
       if (editingRole) {
-        await updateRole(editingRole.no, formData);
+        await updateRole(editingRole._id || editingRole.no, formData);
       } else {
         await createRole(formData);
       }
@@ -111,7 +138,7 @@ const Dashboard: React.FC = () => {
   const handleAddEditLabourSubmit = async (formData: AddLabourFormData) => {
     try {
       if (editingLabour) {
-        await updateLabour(editingLabour.no, formData);
+        await updateLabour(editingLabour._id || editingLabour.no, formData);
       } else {
         await createLabour(formData);
       }
@@ -137,6 +164,10 @@ const Dashboard: React.FC = () => {
             users={users}
             onEditUser={handleEditUserClick}
             onToggleStatus={handleToggleUserStatus}
+            loading={usersLoading}
+            pagination={usersPagination}
+            onPageChange={handleUsersPageChange}
+            onItemsPerPageChange={handleUsersItemsPerPageChange}
           />
         );
       case "Role":
@@ -146,6 +177,10 @@ const Dashboard: React.FC = () => {
             onEditRole={handleEditRoleClick}
             onDeleteRole={handleDeleteRole}
             onToggleStatus={handleToggleRoleStatus}
+            loading={rolesLoading}
+            pagination={rolesPagination}
+            onPageChange={handleRolesPageChange}
+            onItemsPerPageChange={handleRolesItemsPerPageChange}
           />
         );
       case "Labour":
@@ -154,6 +189,10 @@ const Dashboard: React.FC = () => {
             labours={labours}
             onEditLabour={handleEditLabourClick}
             onDeleteLabour={handleDeleteLabour}
+            loading={laboursLoading}
+            pagination={laboursPagination}
+            onPageChange={handleLaboursPageChange}
+            onItemsPerPageChange={handleLaboursItemsPerPageChange}
           />
         );
       default:
@@ -174,7 +213,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="bg-white shadow-sm">
-        <div className="container   sm:px-6 lg:px-8">
+        <div className="container sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between py-4 gap-4 sm:gap-0">
             <div className="flex items-center space-x-4">
               <button
@@ -238,7 +277,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="container  py-6">
+      <div className="container py-6">
         {renderContent()}
       </div>
 
@@ -247,6 +286,7 @@ const Dashboard: React.FC = () => {
         onClose={() => setIsAddUserModalOpen(false)}
         onSubmit={handleAddUserSubmit}
         editingUser={editingUser}
+        loading={usersLoading}
       />
 
       <AddEditRoleModal

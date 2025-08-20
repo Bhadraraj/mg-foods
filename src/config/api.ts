@@ -83,9 +83,9 @@ export const ENDPOINTS = {
   
   // Purchase Management
   PURCHASES: {
-    BASE: '/purchases',
-    BY_ID: (id: string) => `/purchases/${id}`,
-    STATUS: (id: string) => `/purchases/${id}/status`,
-    STOCK_ENTRY: (id: string) => `/purchases/${id}/stock-entry`,
+    BASE: '/v1/purchases',
+    BY_ID: (id: string) => `/v1/purchases/${id}`,
+    STATUS: (id: string) => `/v1/purchases/${id}/status`,
+    STOCK_ENTRY: (id: string) => `/v1/purchases/${id}/stock-entry`,
   },
 } as const;
