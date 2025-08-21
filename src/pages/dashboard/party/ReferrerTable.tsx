@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Referrer } from '../../../types/party';
 import { useReferrers } from '../../../hooks/useReferrers';
+import { transformReferrerData } from '../../../utils/dataTransformers';
 import Pagination from '../../../components/ui/Pagination';
 
 interface ReferrerTableProps {
@@ -14,6 +15,7 @@ const ReferrerTable: React.FC<ReferrerTableProps> = ({ onEditReferrer, searchTer
   const {
     referrers,
     loading,
+    error,
     pagination,
     handlePageChange,
     handleItemsPerPageChange,
@@ -26,9 +28,23 @@ const ReferrerTable: React.FC<ReferrerTableProps> = ({ onEditReferrer, searchTer
 
   useEffect(() => {
     setLocalSearchTerm(searchTerm);
-    fetchReferrers();
+    if (searchTerm !== localSearchTerm) {
+      fetchReferrers();
+    }
   }, [searchTerm, fetchReferrers]);
 
+  // Transform the referrer data to match the expected format
+  const transformedReferrers = transformReferrerData(referrers);
+
+  if (error) {
+    return (
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div className="text-center text-red-500 py-8">
+          Error loading referrers: {error.message}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
       {loading ? (
@@ -49,9 +65,9 @@ const ReferrerTable: React.FC<ReferrerTableProps> = ({ onEditReferrer, searchTer
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {referrers.map((referrer) => (
+              {transformedReferrers.map((referrer, index) => (
                 <tr key={referrer.id}>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{referrer.id}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{referrer.referrerName}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{referrer.phoneNumber}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{referrer.gstNumber}</td>
@@ -66,7 +82,7 @@ const ReferrerTable: React.FC<ReferrerTableProps> = ({ onEditReferrer, searchTer
             </tbody>
           </table>
           
-          {pagination.pages > 1 && (
+          {pagination && pagination.pages > 1 && (
             <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
               <Pagination
                 currentPage={pagination.page}

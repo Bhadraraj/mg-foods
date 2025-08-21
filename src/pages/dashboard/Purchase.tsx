@@ -7,7 +7,8 @@ import AddProductToRackModal from "../../components/modals/AddProductToRack";
 import { usePurchases } from "../../hooks/usePurchases";
 import { useAddProductToRack } from "../../hooks/useAddProductToRack";
 import Pagination from "../../components/ui/Pagination";
-import Spinner from "../../components/LoadingSpinner";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { transformPurchaseData } from "../../utils/dataTransformers";
 
 // Updated PurchaseItem interface (ensure this is consistent with your types file)
 interface PurchaseItem {
@@ -591,6 +592,7 @@ const PurchaseManagement: React.FC = () => {
     vendor: selectedVendor || undefined,
     startDate: dateRange.from.toISOString(),
     endDate: dateRange.to.toISOString(),
+    autoFetch: true,
   });
 
   // Use the add product to rack hook
@@ -603,14 +605,15 @@ const PurchaseManagement: React.FC = () => {
     handleAddProductToRack: handleAddProductToRackSave,
   } = useAddProductToRack();
 
-  // Filter purchases based on search term
-  const filteredPurchases = purchases.filter((purchase) => {
+  // Transform and filter purchases based on search term
+  const transformedPurchases = transformPurchaseData(purchases);
+  const filteredPurchases = transformedPurchases.filter((purchase) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
       purchase.id?.toLowerCase().includes(searchLower) ||
       purchase.vendorName?.toLowerCase().includes(searchLower) ||
-      purchase.details?.invoiceNo?.toLowerCase().includes(searchLower)
+      purchase.invoiceNo?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -813,7 +816,7 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
         <div className="overflow-x-auto">
           {loading ? (
             <div className="flex justify-center items-center py-10">
-              <Spinner size="lg" />
+              <LoadingSpinner size="lg" />
             </div>
           ) : error ? (
             <div className="text-center py-10 text-red-500">
@@ -886,17 +889,7 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
                           <button
                             onClick={(e) => {
                               e.stopPropagation(); // Prevent row click
-                              if (item.details) {
-                                handleOpenNewPurchaseModal(
-                                  order.type as "PO" | "PI" | "Invoice"
-                                );
-                              } else {
-                                // Using a custom message box instead of alert()
-                                console.log(
-                                  `No detailed data available for ${order.type}.`
-                                );
-                                // Implement a custom modal/toast for user feedback here
-                              }
+                              handleOpenNewPurchaseModal(null);
                             }}
                             className="font-semibold text-left flex-grow focus:outline-none px-1 py-0.5"
                           >
@@ -962,16 +955,10 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (item.details) {
-                                if (fulfill.type === "Fulfilment") {
-                                  handleOpenFulfillmentModal(item.details);
-                                } else if (fulfill.type === "Stock Entry") {
-                                  handleOpenVerificationModal(item.details);
-                                }
-                              } else {
-                                console.log(
-                                  `No detailed data available for ${fulfill.type} details.`
-                                );
+                              if (fulfill.type === "Fulfilment") {
+                                handleOpenFulfillmentModal(item);
+                              } else if (fulfill.type === "Stock Entry") {
+                                handleOpenVerificationModal(item);
                               }
                             }}
                             className="w-1/2 font-semibold text-left focus:outline-none px-1 py-0.5"
@@ -1030,31 +1017,15 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
           )}
           
           {/* Pagination */}
-          {!loading && !error && filteredPurchases.length > 0 && (
+          {!loading && !error && filteredPurchases.length > 0 && pagination && (
             <div className="mt-4 flex justify-between items-center px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
-              <div className="flex items-center">
-                <select
-                  className="mr-2 border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                  value={pagination.limit}
-                  onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                >
-                  <option value="10">10 per page</option>
-                  <option value="20">20 per page</option>
-                  <option value="50">50 per page</option>
-                </select>
-                <span className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{" "}
-                  <span className="font-medium">
-                    {Math.min(pagination.page * pagination.limit, pagination.totalItems)}
-                  </span>{" "}
-                  of <span className="font-medium">{pagination.totalItems}</span> results
-                </span>
-              </div>
-              
               <Pagination
                 currentPage={pagination.page}
-                totalPages={Math.ceil(pagination.totalItems / pagination.limit)}
+                totalPages={pagination.pages}
+                totalItems={pagination.total}
+                itemsPerPage={pagination.limit}
                 onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
               />
             </div>
           )}
@@ -1074,11 +1045,6 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
         <NewPurchaseModal
           isOpen={isNewPurchaseModalOpen}
           onClose={handleCloseNewPurchaseModal}
-          onSave={(purchaseData) => {
-            createPurchase(purchaseData);
-            handleCloseNewPurchaseModal();
-          }}
-          initialData={selectedPurchaseDetails}
         />
       )}
 
@@ -1088,10 +1054,6 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
           isOpen={isFulfillmentModalOpen}
           onClose={handleCloseFulfillmentModal}
           purchaseDetails={selectedPurchaseDetails}
-          onSave={(fulfillmentData) => {
-            completePurchase(fulfillmentData);
-            handleCloseFulfillmentModal();
-          }}
         />
       )}
 
@@ -1101,10 +1063,6 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
           isOpen={isVerificationModalOpen}
           onClose={handleCloseVerificationModal}
           purchaseDetails={selectedPurchaseDetails}
-          onSave={(verificationData) => {
-            updatePurchaseStatus(verificationData);
-            handleCloseVerificationModal();
-          }}
         />
       )}
 

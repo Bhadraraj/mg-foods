@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Vendor } from '../../../components/types/';
+import { Vendor } from '../../../types/party';
 import { useVendors } from '../../../hooks/useVendors';
+import { transformVendorData } from '../../../utils/dataTransformers';
 import Pagination from '../../../components/ui/Pagination';
 
 interface VendorTableProps {
@@ -14,6 +15,7 @@ const VendorTable: React.FC<VendorTableProps> = ({ onEditVendor, searchTerm }) =
   const {
     vendors,
     loading,
+    error,
     pagination,
     handlePageChange,
     handleItemsPerPageChange,
@@ -25,9 +27,23 @@ const VendorTable: React.FC<VendorTableProps> = ({ onEditVendor, searchTerm }) =
 
   useEffect(() => {
     setLocalSearchTerm(searchTerm);
-    fetchVendors({ search: searchTerm });
+    if (searchTerm !== localSearchTerm) {
+      fetchVendors({ search: searchTerm });
+    }
   }, [searchTerm, fetchVendors]);
 
+  // Transform the vendor data to match the expected format
+  const transformedVendors = transformVendorData(vendors);
+
+  if (error) {
+    return (
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div className="text-center text-red-500 py-8">
+          Error loading vendors: {error.message}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col">
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
@@ -52,16 +68,16 @@ const VendorTable: React.FC<VendorTableProps> = ({ onEditVendor, searchTerm }) =
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {vendors.map((vendor, index) => (
+          {transformedVendors.map((vendor, index) => (
             <tr key={vendor.id}>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.id}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.vendorNameCode}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.gstNo}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.phoneNumber}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.address}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.purchaseTotal}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.paidTotal}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.balance}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">₹{vendor.purchaseTotal.toLocaleString()}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">₹{vendor.paidTotal.toLocaleString()}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">₹{vendor.balance.toLocaleString()}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{vendor.account}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                 <button onClick={() => onEditVendor(vendor)} className="text-blue-600 hover:text-blue-900">
@@ -74,7 +90,7 @@ const VendorTable: React.FC<VendorTableProps> = ({ onEditVendor, searchTerm }) =
       </table>
         )}
       </div>
-      {pagination.pages > 1 && (
+      {pagination && pagination.pages > 1 && (
         <div className="mt-4">
           <Pagination
             currentPage={pagination.page}

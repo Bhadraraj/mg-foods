@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Labour } from '../../../components/types';
+import { Labour } from '../../../types/party';
 import { useLabour } from '../../../hooks/useLabour';
+import { transformLabourData } from '../../../utils/dataTransformers';
 import Pagination from '../../../components/ui/Pagination';
 
 interface LabourTableProps {
@@ -14,19 +15,31 @@ const LabourTable: React.FC<LabourTableProps> = ({ onEditLabour, searchTerm }) =
   const { 
     labour: labours, 
     loading, 
+    error,
     pagination, 
     handlePageChange, 
     handleItemsPerPageChange 
   } = useLabour({
     search: localSearchTerm,
-    page: 1,
-    limit: 10
+    autoFetch: true
   });
   
   useEffect(() => {
     setLocalSearchTerm(searchTerm);
   }, [searchTerm]);
 
+  // Transform the labour data to match the expected format
+  const transformedLabours = transformLabourData(labours);
+
+  if (error) {
+    return (
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div className="text-center text-red-500 py-8">
+          Error loading labour records: {error.message}
+        </div>
+      </div>
+    );
+  }
   return (
     <div>
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
@@ -47,12 +60,12 @@ const LabourTable: React.FC<LabourTableProps> = ({ onEditLabour, searchTerm }) =
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {labours.map((labour) => (
+              {transformedLabours.map((labour, index) => (
             <tr key={labour.id}>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{labour.id}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{labour.labourName}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{labour.phoneNumber}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">₹ {labour.monthlyIncome.toLocaleString()}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{labour.name || labour.labourName}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{labour.mobileNumber || labour.phoneNumber}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">₹ {(labour.monthlySalary || labour.monthlyIncome || 0).toLocaleString()}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{labour.address}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                 <button onClick={() => onEditLabour(labour)} className="text-blue-600 hover:text-blue-900">
@@ -65,13 +78,15 @@ const LabourTable: React.FC<LabourTableProps> = ({ onEditLabour, searchTerm }) =
           </table>
         )}
       </div>
-      {pagination.pages > 1 && (
+      {pagination && pagination.pages > 1 && (
         <div className="mt-4">
           <Pagination
             currentPage={pagination.page}
             totalPages={pagination.pages}
             onPageChange={handlePageChange}
             onItemsPerPageChange={handleItemsPerPageChange}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
           />
         </div>
       )}  

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Customer } from '../../../components/types/';
+import { Customer } from '../../../types/party';
 import { useCustomers } from '../../../hooks/useCustomers';
+import { transformCustomerData } from '../../../utils/dataTransformers';
 import Pagination from '../../../components/ui/Pagination';
 
 interface CustomerTableProps {
@@ -14,6 +15,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onEditCustomer, searchTer
   const {
     customers,
     loading,
+    error,
     pagination,
     handlePageChange,
     handleItemsPerPageChange,
@@ -25,9 +27,23 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onEditCustomer, searchTer
 
   useEffect(() => {
     setLocalSearchTerm(searchTerm);
-    fetchCustomers({ search: searchTerm });
+    if (searchTerm !== localSearchTerm) {
+      fetchCustomers({ search: searchTerm });
+    }
   }, [searchTerm, fetchCustomers]);
 
+  // Transform the customer data to match the expected format
+  const transformedCustomers = transformCustomerData(customers);
+
+  if (error) {
+    return (
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div className="text-center text-red-500 py-8">
+          Error loading customers: {error.message}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col">
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
@@ -50,9 +66,9 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onEditCustomer, searchTer
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {customers.map((customer, index) => (
+          {transformedCustomers.map((customer, index) => (
             <tr key={customer.id}>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{customer.id}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{customer.customerName}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{customer.phoneNumber}</td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{customer.gstNumber}</td>
@@ -70,7 +86,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({ onEditCustomer, searchTer
       </table>
         )}
       </div>
-      {pagination.pages > 1 && (
+      {pagination && pagination.pages > 1 && (
         <div className="mt-4">
           <Pagination
             currentPage={pagination.page}
