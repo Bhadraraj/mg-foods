@@ -55,7 +55,7 @@ export const ENDPOINTS = {
   
   // Customer Management
   CUSTOMERS: {
-    BASE: '/customers',
+    BASE: '/',
     BY_ID: (id: string) => `/customers/${id}`,
   },
   
