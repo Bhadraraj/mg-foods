@@ -12,6 +12,7 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
     limit: 20,
     total: 0,
     pages: 0,
+    current: 1,
   });
 
   const { autoFetch = true, ...fetchOptions } = options;
@@ -19,11 +20,20 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
   const lastFetchParams = useRef<string>('');
 
   const {
-    data: purchasesData,
+    data: purchasesResponse,
     loading,
     error,
     execute: fetchPurchases,
-  } = useApiQuery<{ purchases: Purchase[] }>({
+  } = useApiQuery<{
+    success: boolean;
+    data: Purchase[];
+    pagination: {
+      current: number;
+      pages: number;
+      total: number;
+      limit: number;
+    };
+  }>({
     showSuccessToast: false,
   });
 
@@ -80,8 +90,23 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
     try {
       const response = await fetchPurchases(() => purchaseService.getPurchases(params));
       
+      // Debug log to see the actual response structure
+      console.log('fetchPurchases response:', response);
+      
+      // Update pagination from response - handle different response structures
+      let paginationData = null;
       if (response?.pagination) {
-        setPagination(response.pagination);
+        paginationData = response.pagination;
+      } else if (response?.data?.pagination) {
+        paginationData = response.data.pagination;
+      }
+
+      if (paginationData) {
+        setPagination(prev => ({
+          ...prev,
+          ...paginationData,
+          page: paginationData.current || paginationData.page || prev.page,
+        }));
       }
     } finally {
       fetchRef.current = false;
@@ -122,8 +147,26 @@ export const usePurchases = (options: UsePurchasesOptions = {}) => {
     }
   }, [fetchPurchasesData, autoFetch, pagination.page, pagination.limit]);
 
+  // Extract purchases array from response - handle multiple possible response structures
+  let purchases = [];
+  
+  if (purchasesResponse) {
+    console.log('purchasesResponse structure:', purchasesResponse);
+    
+    // Try different possible response structures
+    if (Array.isArray(purchasesResponse)) {
+      purchases = purchasesResponse;
+    } else if (purchasesResponse.data && Array.isArray(purchasesResponse.data)) {
+      purchases = purchasesResponse.data;
+    } else if (purchasesResponse.success && purchasesResponse.data && Array.isArray(purchasesResponse.data)) {
+      purchases = purchasesResponse.data;
+    }
+  }
+
+  console.log('Final purchases array:', purchases);
+
   return {
-    purchases: purchasesData?.purchases || [],
+    purchases,
     loading,
     error,
     pagination,

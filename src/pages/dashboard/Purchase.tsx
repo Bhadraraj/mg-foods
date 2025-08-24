@@ -8,54 +8,52 @@ import { usePurchases } from "../../hooks/usePurchases";
 import { useAddProductToRack } from "../../hooks/useAddProductToRack";
 import Pagination from "../../components/ui/Pagination";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { transformPurchaseData } from "../../utils/dataTransformers";
 
-// Updated PurchaseItem interface (ensure this is consistent with your types file)
+// Updated PurchaseItem interface to match API response
 interface PurchaseItem {
-  id: string;
+  _id: string;
   vendorName: string;
-  customer: string;
-  gst: string;
-  purchaseOrder: {
-    status: "Progress" | "Completed" | "Pending";
-    type: "PO" | "PI" | "Invoice";
-  }[];
-  purchaseTotal: number;
-  paymentStatus: "Pending" | "In Progress" | "Completed" | "Paid";
-  fulfillment: {
-    type: "Fulfilment" | "Stock Entry";
-    status: "Pending" | "Completed";
-  }[];
-  createdBy: string;
-  lastUpdatedBy: string;
-  date: string;
-  details?: {
-    invoiceNo: string;
-    invoiceDate: string;
-    totalItems: number;
-    totalQty: number;
-    brand: string;
-    items: Array<{
-      no: string;
-      image: string;
-      productName: string;
-      price: number;
-      qty: number;
-      inventoryQty: number;
-    }>;
+  brandName: string;
+  invoiceNo: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  expectedDeliveryDate: string;
+  uid: string;
+  items: Array<{
+    itemName: string;
+    quantity: number;
+    price: number;
+    total: number;
+    taxPercentage: number;
+    taxAmount: number;
+    productName: string;
+    hsn: string;
     unit: string;
     mrp: number;
-    storeRetailPrice: number;
-    storeWholePrice: number;
-    estimationPrice: number;
-    quotation: number;
-    igst: string;
-    sgst: string;
-    cgst: string;
-    hsn: string;
+    purchasePrice: number;
     description: string;
     discount: number;
+  }>;
+  pricing: {
+    subTotal: number;
+    taxAmount: number;
+    discountAmount: number;
+    roundOff: number;
+    grandTotal: number;
   };
+  paymentStatus: "pending" | "partial" | "completed" | "paid";
+  fulfillmentStatus: "pending" | "completed";
+  status?: {
+    po?: string;
+    pi?: string;
+    invoice?: string;
+    stockEntry?: string;
+  };
+  notes: string;
+  store: string;
+  createdAt: string;
+  updatedAt: string;
+  purchaseId: string;
 }
 
 interface CalendarProps {
@@ -73,18 +71,8 @@ const Calendar: React.FC<CalendarProps> = ({ isOpen, onClose, onApply }) => {
   const [toYear, setToYear] = useState(2024);
 
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ];
 
   const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -107,9 +95,11 @@ const Calendar: React.FC<CalendarProps> = ({ isOpen, onClose, onApply }) => {
     const daysInMonth = getDaysInMonth(month, year);
     const firstDay = getFirstDayOfMonth(month, year);
     const days = [];
+    
     for (let i = 0; i < firstDay; i++) {
       days.push(<div key={`empty-${i}`} className="w-8 h-8"></div>);
     }
+    
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       const isSelected =
@@ -242,333 +232,6 @@ const PurchaseManagement: React.FC = () => {
     from: new Date(2024, 5, 10),
     to: new Date(2024, 6, 26),
   });
-    const samplePurchaseData: PurchaseItem[] = [
-    {
-      id: "MUK192834930293B4",
-      vendorName: "SS Marketing",
-      customer: "Pidilite",
-      gst: "33AVSPD9193QQ1ZL",
-      purchaseOrder: [
-        { status: "Progress", type: "PO" },
-        { status: "Completed", type: "PI" },
-        { status: "Completed", type: "Invoice" },
-      ],
-      purchaseTotal: 1820,
-      paymentStatus: "Pending",
-      fulfillment: [
-        { type: "Fulfilment", status: "Pending" },
-        { type: "Stock Entry", status: "Pending" },
-      ],
-      createdBy: "Sundar",
-      lastUpdatedBy: "Sundar",
-      date: "2025-04-12",
-      details: {
-        invoiceNo: "261",
-        invoiceDate: "2025-05-12 04:34:56",
-        totalItems: 3,
-        totalQty: 15,
-        brand: "Sand Master",
-        items: [
-          {
-            no: "01",
-            image: "https://placehold.co/40x40/FF0000/FFFFFF?text=P1", // Placeholder image
-            productName: "Product 01",
-            price: 0.0,
-            qty: 5,
-            inventoryQty: 5,
-          },
-          {
-            no: "02",
-            image: "https://placehold.co/40x40/00FF00/FFFFFF?text=P2", // Placeholder image
-            productName: "Product 02",
-            price: 10.5,
-            qty: 5,
-            inventoryQty: 5,
-          },
-          {
-            no: "03",
-            image: "https://placehold.co/40x40/0000FF/FFFFFF?text=P3", // Placeholder image
-            productName: "Product 03",
-            price: 25.75,
-            qty: 5,
-            inventoryQty: 5,
-          },
-        ],
-        unit: "Pcs",
-        mrp: 3331.7,
-        storeRetailPrice: 1000.0,
-        storeWholePrice: 800.0,
-        estimationPrice: 900.0,
-        quotation: 850.0,
-        igst: "18%",
-        sgst: "9%",
-        cgst: "9%",
-        hsn: "12345",
-        description: "Description for product 01",
-        discount: 50.0,
-      },
-    },
-    {
-      id: "MUK192834930293B5",
-      vendorName: "ABC Suppliers",
-      customer: "Reliance",
-      gst: "22ABCDE1234F5G6H7",
-      purchaseOrder: [
-        { status: "Completed", type: "PO" },
-        { status: "Progress", type: "PI" },
-        { status: "Pending", type: "Invoice" },
-      ],
-      purchaseTotal: 3500,
-      paymentStatus: "In Progress",
-      fulfillment: [
-        { type: "Fulfilment", status: "Completed" },
-        { type: "Stock Entry", status: "Pending" },
-      ],
-      createdBy: "Alice",
-      lastUpdatedBy: "Bob",
-      date: "2025-03-20",
-      details: {
-        invoiceNo: "262",
-        invoiceDate: "2025-04-01 10:00:00",
-        totalItems: 2,
-        totalQty: 10,
-        brand: "Tech Innovations",
-        items: [
-          {
-            no: "01",
-            image: "https://placehold.co/40x40/FF0000/FFFFFF?text=G1", // Placeholder image
-            productName: "Gadget X",
-            price: 100.0,
-            qty: 5,
-            inventoryQty: 5,
-          },
-          {
-            no: "02",
-            image: "https://placehold.co/40x40/00FF00/FFFFFF?text=G2", // Placeholder image
-            productName: "Gadget Y",
-            price: 200.0,
-            qty: 5,
-            inventoryQty: 5,
-          },
-        ],
-        unit: "Pcs",
-        mrp: 5000.0,
-        storeRetailPrice: 1500.0,
-        storeWholePrice: 1200.0,
-        estimationPrice: 1300.0,
-        quotation: 1250.0,
-        igst: "12%",
-        sgst: "6%",
-        cgst: "6%",
-        hsn: "67890",
-        description: "Description for product X",
-        discount: 100.0,
-      },
-    },
-    {
-      id: "MUK192834930293B6",
-      vendorName: "XYZ Distributors",
-      customer: "Tata",
-      gst: "11ZYXWV9876U5T4S3",
-      purchaseOrder: [
-        { status: "Completed", type: "PO" },
-        { status: "Completed", type: "PI" },
-        { status: "Completed", type: "Completed" }, // Changed to "Completed" to match image
-      ],
-      purchaseTotal: 5000,
-      paymentStatus: "Completed",
-      fulfillment: [
-        { type: "Fulfilment", status: "Completed" },
-        { type: "Stock Entry", status: "Completed" },
-      ],
-      createdBy: "Charlie",
-      lastUpdatedBy: "Charlie",
-      date: "2025-05-01",
-      details: {
-        invoiceNo: "263",
-        invoiceDate: "2025-05-15 11:30:00",
-        totalItems: 1,
-        totalQty: 20,
-        brand: "Global Supplies",
-        items: [
-          {
-            no: "01",
-            image: "https://placehold.co/40x40/0000FF/FFFFFF?text=RM", // Placeholder image
-            productName: "Raw Material A",
-            price: 50.0,
-            qty: 20,
-            inventoryQty: 20,
-          },
-        ],
-        unit: "Kg",
-        mrp: 2000.0,
-        storeRetailPrice: 60.0,
-        storeWholePrice: 55.0,
-        estimationPrice: 58.0,
-        quotation: 57.0,
-        igst: "5%",
-        sgst: "2.5%",
-        cgst: "2.5%",
-        hsn: "54321",
-        description: "Description for raw material A",
-        discount: 20.0,
-      },
-    },
-    // Adding more dummy data to match the image's row count and variations
-    {
-      id: "MUK192834930293B7",
-      vendorName: "SS Marketing",
-      customer: "Pidilite",
-      gst: "33AVSPD9193QQ1ZL",
-      purchaseOrder: [
-        { status: "Completed", type: "PO" },
-        { status: "Completed", type: "PI" },
-        { status: "Completed", type: "Invoice" },
-      ],
-      purchaseTotal: 1862,
-      paymentStatus: "Paid",
-      fulfillment: [
-        { type: "Fulfilment", status: "Completed" },
-        { type: "Stock Entry", status: "Completed" },
-      ],
-      createdBy: "Sundar",
-      lastUpdatedBy: "Sundar",
-      date: "2025-04-12",
-      details: {
-        // Reusing details for brevity, ideally unique for each entry
-        invoiceNo: "264",
-        invoiceDate: "2025-05-12 04:34:56",
-        totalItems: 3,
-        totalQty: 15,
-        brand: "Sand Master",
-        items: [
-          {
-            no: "01",
-            image: "https://placehold.co/40x40/FF0000/FFFFFF?text=P1",
-            productName: "Product 01",
-            price: 0.0,
-            qty: 5,
-            inventoryQty: 5,
-          },
-        ],
-        unit: "Pcs",
-        mrp: 3331.7,
-        storeRetailPrice: 1000.0,
-        storeWholePrice: 800.0,
-        estimationPrice: 900.0,
-        quotation: 850.0,
-        igst: "18%",
-        sgst: "9%",
-        cgst: "9%",
-        hsn: "12345",
-        description: "Description for product 01",
-        discount: 50.0,
-      },
-    },
-    {
-      id: "MUK192834930293B8",
-      vendorName: "SS Marketing",
-      customer: "Pidilite",
-      gst: "33AVSPD9193QQ1ZL",
-      purchaseOrder: [
-        { status: "Completed", type: "PO" },
-        { status: "Completed", type: "PI" },
-        { status: "Completed", type: "Invoice" },
-      ],
-      purchaseTotal: 1862,
-      paymentStatus: "Paid",
-      fulfillment: [
-        { type: "Fulfilment", status: "Completed" },
-        { type: "Stock Entry", status: "Completed" },
-      ],
-      createdBy: "Sundar",
-      lastUpdatedBy: "Sundar",
-      date: "2025-04-12",
-      details: {
-        // Reusing details for brevity, ideally unique for each entry
-        invoiceNo: "265",
-        invoiceDate: "2025-05-12 04:34:56",
-        totalItems: 3,
-        totalQty: 15,
-        brand: "Sand Master",
-        items: [
-          {
-            no: "01",
-            image: "https://placehold.co/40x40/FF0000/FFFFFF?text=P1",
-            productName: "Product 01",
-            price: 0.0,
-            qty: 5,
-            inventoryQty: 5,
-          },
-        ],
-        unit: "Pcs",
-        mrp: 3331.7,
-        storeRetailPrice: 1000.0,
-        storeWholePrice: 800.0,
-        estimationPrice: 900.0,
-        quotation: 850.0,
-        igst: "18%",
-        sgst: "9%",
-        cgst: "9%",
-        hsn: "12345",
-        description: "Description for product 01",
-        discount: 50.0,
-      },
-    },
-    {
-      id: "MUK192834930293B9",
-      vendorName: "SS Marketing",
-      customer: "Pidilite",
-      gst: "33AVSPD9193QQ1ZL",
-      purchaseOrder: [
-        { status: "Completed", type: "PO" },
-        { status: "Completed", type: "PI" },
-        { status: "Completed", type: "Invoice" },
-      ],
-      purchaseTotal: 1862,
-      paymentStatus: "Paid",
-      fulfillment: [
-        { type: "Fulfilment", status: "Completed" },
-        { type: "Stock Entry", status: "Completed" },
-      ],
-      createdBy: "Sundar",
-      lastUpdatedBy: "Sundar",
-      date: "2025-04-12",
-      details: {
-        // Reusing details for brevity, ideally unique for each entry
-        invoiceNo: "266",
-        invoiceDate: "2025-05-12 04:34:56",
-        totalItems: 3,
-        totalQty: 15,
-        brand: "Sand Master",
-        items: [
-          {
-            no: "01",
-            image: "https://placehold.co/40x40/FF0000/FFFFFF?text=P1",
-            productName: "Product 01",
-            price: 0.0,
-            qty: 5,
-            inventoryQty: 5,
-          },
-        ],
-        unit: "Pcs",
-        mrp: 3331.7,
-        storeRetailPrice: 1000.0,
-        storeWholePrice: 800.0,
-        estimationPrice: 900.0,
-        quotation: 850.0,
-        igst: "18%",
-        sgst: "9%",
-        cgst: "9%",
-        hsn: "12345",
-        description: "Description for product 01",
-        discount: 50.0,
-      },
-    },
-  ];
-
-  // Add the missing state declaration for purchaseData
-  const [purchaseData, setPurchaseData] = useState<PurchaseItem[]>(samplePurchaseData);
 
   // Use the purchases hook for data fetching and pagination
   const {
@@ -595,6 +258,11 @@ const PurchaseManagement: React.FC = () => {
     autoFetch: true,
   });
 
+  // Debug log to see what data we're getting
+  console.log('Purchases data:', purchases);
+  console.log('Loading:', loading);
+  console.log('Error:', error);
+
   // Use the add product to rack hook
   const {
     isModalOpen: isAddProductToRackModalOpen,
@@ -605,144 +273,102 @@ const PurchaseManagement: React.FC = () => {
     handleAddProductToRack: handleAddProductToRackSave,
   } = useAddProductToRack();
 
-  // Transform and filter purchases based on search term
-  const transformedPurchases = transformPurchaseData(purchases);
-  const filteredPurchases = transformedPurchases.filter((purchase) => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      purchase.id?.toLowerCase().includes(searchLower) ||
-      purchase.vendorName?.toLowerCase().includes(searchLower) ||
-      purchase.invoiceNo?.toLowerCase().includes(searchLower)
-    );
+  // Filter purchases based on search term and other filters
+  // Handle the case where purchases might be undefined or not an array
+  const purchasesList = Array.isArray(purchases) ? purchases : [];
+  
+  const filteredPurchases = purchasesList.filter((purchase) => {
+    if (!purchase) return false;
+    
+    const matchesSearch = !searchTerm || 
+      purchase.purchaseId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      purchase.vendorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      purchase.invoiceNo?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesVendor = !selectedVendor || purchase.vendorName === selectedVendor;
+    const matchesBrand = !selectedBrand || purchase.brandName === selectedBrand;
+    
+    return matchesSearch && matchesVendor && matchesBrand;
   });
 
   const [isNewPurchaseModalOpen, setIsNewPurchaseModalOpen] = useState(false);
-  const [isFulfillmentModalOpen, setIsFulfillmentModalOpen] = useState(false); // State for FulfillmentModal
-  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false); // State for VerificationModal
-  const [selectedPurchaseDetails, setSelectedPurchaseDetails] = useState<
-    PurchaseItem["details"] | null
-  >(null); // State for passing details to modals
+  const [isFulfillmentModalOpen, setIsFulfillmentModalOpen] = useState(false);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [selectedPurchaseDetails, setSelectedPurchaseDetails] = useState<any>(null);
 
   // Handlers for modals
-const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null = null) => {
-  setSelectedPurchaseDetails(itemDetails);
-  setIsNewPurchaseModalOpen(true);
-};
+  const handleOpenNewPurchaseModal = (itemDetails: any = null) => {
+    setSelectedPurchaseDetails(itemDetails);
+    setIsNewPurchaseModalOpen(true);
+  };
+  
   const handleCloseNewPurchaseModal = () => setIsNewPurchaseModalOpen(false);
   
-  const handleOpenFulfillmentModal = (purchaseDetails: PurchaseItem["details"]) => {
+  const handleOpenFulfillmentModal = (purchaseDetails: any) => {
     setSelectedPurchaseDetails(purchaseDetails);
     setIsFulfillmentModalOpen(true);
   };
+  
   const handleCloseFulfillmentModal = () => setIsFulfillmentModalOpen(false);
   
-  // const handleOpenVerificationModal = (purchaseDetails: PurchaseItem["details"]) => {
-  //   setSelectedPurchaseDetails(purchaseDetails);
-  //   setIsVerificationModalOpen(true);
-  // };
   const handleCloseVerificationModal = () => setIsVerificationModalOpen(false);
   
-
+  const handleOpenVerificationModal = (itemDetails: any) => {
+    setSelectedPurchaseDetails(itemDetails);
+    setIsVerificationModalOpen(true);
+  };
 
   const handleNewPurchaseSubmit = (data: any) => {
     console.log("New Purchase Data:", data);
-    // In a real app, you'd add this new purchase to the purchaseData state
     setIsNewPurchaseModalOpen(false);
   };
 
   const getStatusColor = (status: string) => {
-    if (status === "Completed" || status === "Paid")
+    const statusLower = status?.toLowerCase() || 'pending';
+    if (statusLower === "completed" || statusLower === "paid")
       return "bg-green-500 text-white";
-    if (status === "Progress" || status === "In Progress")
+    if (statusLower === "progress" || statusLower === "partial" || statusLower === "draft")
       return "bg-yellow-400 text-black";
-    if (status === "Pending") return "bg-red-500 text-white";
-    return "bg-gray-500 text-white"; // Default
+    if (statusLower === "pending") 
+      return "bg-red-500 text-white";
+    return "bg-gray-500 text-white";
   };
 
-  const togglePurchaseOrderStatus = (
-    purchaseItemId: string,
-    orderType: "PO" | "PI" | "Invoice",
-    currentStatus: "Progress" | "Completed" | "Pending"
-  ) => {
-    setPurchaseData((prevData) =>
-      prevData.map((item) =>
-        item.id === purchaseItemId
-          ? {
-              ...item,
-              purchaseOrder: item.purchaseOrder.map((order) =>
-                order.type === orderType
-                  ? {
-                      ...order,
-                      status:
-                        currentStatus === "Pending"
-                          ? "Progress"
-                          : currentStatus === "Progress"
-                          ? "Completed"
-                          : "Pending", // Cycle: Pending -> Progress -> Completed -> Pending
-                    }
-                  : order
-              ),
-            }
-          : item
-      )
-    );
+  const getOrderStatus = (purchase: any, type: 'po' | 'pi' | 'invoice') => {
+    // Handle both object and string status formats
+    if (purchase.status && typeof purchase.status === 'object') {
+      return purchase.status[type] || 'Pending';
+    }
+    // For items with string status, map to appropriate values
+    if (purchase.status === 'draft') {
+      return type === 'po' ? 'Completed' : 'Pending';
+    }
+    return purchase.status || 'Pending';
   };
 
-  // This function will now ONLY toggle the status, not open a modal.
-  const toggleFulfillmentStatus = (
-    purchaseItemId: string,
-    fulfillmentType: "Fulfilment" | "Stock Entry",
-    currentStatus: "Pending" | "Completed"
-  ) => {
-    setPurchaseData((prevData) =>
-      prevData.map((item) =>
-        item.id === purchaseItemId
-          ? {
-              ...item,
-              fulfillment: item.fulfillment.map((fulfill) =>
-                fulfill.type === fulfillmentType
-                  ? {
-                      ...fulfill,
-                      status:
-                        currentStatus === "Pending" ? "Completed" : "Pending",
-                    }
-                  : fulfill
-              ),
-            }
-          : item
-      )
-    );
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
   };
 
- 
- 
-
-  // Function to open VerificationModal (for fulfillment status clicks or a dedicated button)
-  const handleOpenVerificationModal = (
-    itemDetails: PurchaseItem["details"]
-  ) => {
-    setSelectedPurchaseDetails(itemDetails);
-    setIsVerificationModalOpen(true);
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR'
+    }).format(amount);
   };
 
   const handleDateRangeApply = (fromDate: Date, toDate: Date) => {
     setDateRange({ from: fromDate, to: toDate });
   };
 
-  // Filtered data based on search term, vendor, and brand
-  const filteredPurchaseData = purchaseData.filter((item) => {
-    const matchesSearch =
-      searchTerm === "" ||
-      item.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesVendor =
-      selectedVendor === "" || item.vendorName === selectedVendor;
-    const matchesBrand =
-      selectedBrand === "" ||
-      (item.details && item.details.brand === selectedBrand);
-    // Add date range filtering if needed
-    return matchesSearch && matchesVendor && matchesBrand;
-  });
+  const handleStatusUpdate = async (purchaseId: string, status: string) => {
+    try {
+      await updatePurchaseStatus(purchaseId, { status });
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    }
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6">
@@ -781,9 +407,7 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
                 onChange={(e) => setSelectedVendor(e.target.value)}
               >
                 <option value="">Vendor</option>
-                <option value="SS Marketing">SS Marketing</option>
-                <option value="ABC Suppliers">ABC Suppliers</option>
-                <option value="XYZ Distributors">XYZ Distributors</option>
+                <option value="Bhavani Hardware">Bhavani Hardware</option>
               </select>
               <select
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-w-[120px]"
@@ -791,19 +415,20 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
                 onChange={(e) => setSelectedBrand(e.target.value)}
               >
                 <option value="">Choose Brand</option>
-                <option value="Sand Master">Sand Master</option>
-                <option value="Tech Innovations">Tech Innovations</option>
-                <option value="Global Supplies">Global Supplies</option>
+                <option value="Acme elec">Acme elec</option>
               </select>
             </div>
 
             {/* Action Buttons */}
             <div className="flex gap-2 ml-auto">
-              <button className="p-2 bg-black text-white rounded-md hover:bg-gray-800">
+              <button 
+                onClick={() => fetchPurchases()}
+                className="p-2 bg-black text-white rounded-md hover:bg-gray-800"
+              >
                 <Search size={20} />
               </button>
               <button
-                onClick={() => handleOpenNewPurchaseModal(null)} // Click Plus to add new, no initial data
+                onClick={() => handleOpenNewPurchaseModal(null)}
                 className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 <Plus size={20} />
@@ -820,7 +445,7 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
             </div>
           ) : error ? (
             <div className="text-center py-10 text-red-500">
-              Error loading purchases: {error.message}
+              Error loading purchases: {error}
             </div>
           ) : filteredPurchases.length === 0 ? (
             <div className="text-center py-10 text-gray-500">
@@ -835,8 +460,8 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="font-medium">Vendor name</div>
-                    <div className="font-medium">Customer</div>
-                    <div className="font-medium">GST</div>
+                    <div className="font-medium">Brand</div>
+                    <div className="font-medium">Invoice No</div>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="font-medium">Purchase Order</div>
@@ -858,161 +483,152 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
                     <div className="font-medium">Last Updated date</div>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="font-medium">Created By</div>
-                    <div className="font-medium">Last Updated By</div>
+                    <div className="font-medium">Store</div>
+                    <div className="font-medium">Notes</div>
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredPurchases.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {item.id}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="text-gray-900 font-semibold">
-                      {item.vendorName}
-                    </div>
-                    <div className="text-gray-700">{item.customer}</div>
-                    <div className="text-gray-500 text-xs">{item.gst}</div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    <div className="space-y-1">
-                      {item.purchaseOrder.map((order, idx) => (
-                        <div
-                          key={idx}
-                          className={`flex items-center justify-between w-full p-1 text-xs rounded-md ${getStatusColor(
-                            order.status
-                          )}`}
-                        >
-                          {/* Button for PO/PI/Invoice type to open NewPurchaseModal */}
+                  <tr key={item._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {item.purchaseId}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="text-gray-900 font-semibold">
+                        {item.vendorName}
+                      </div>
+                      <div className="text-gray-700">{item.brandName}</div>
+                      <div className="text-gray-500 text-xs">{item.invoiceNo}</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <div className="space-y-1">
+                        <div className={`flex items-center justify-between w-full p-1 text-xs rounded-md ${getStatusColor(getOrderStatus(item, 'po'))}`}>
                           <button
                             onClick={(e) => {
-                              e.stopPropagation(); // Prevent row click
-                              handleOpenNewPurchaseModal(null);
+                              e.stopPropagation();
+                              handleOpenNewPurchaseModal(item);
                             }}
                             className="font-semibold text-left flex-grow focus:outline-none px-1 py-0.5"
                           >
-                            {order.type}
+                            PO
                           </button>
-                          {/* Button for PO/PI/Invoice status to toggle status */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent row click
-                              togglePurchaseOrderStatus(
-                                item.id,
-                                order.type,
-                                order.status
-                              );
-                            }}
-                            className="font-semibold text-right focus:outline-none px-1 py-0.5"
-                          >
-                            {order.status}
-                          </button>
+                          <span className="font-semibold text-right px-1 py-0.5">
+                            {getOrderStatus(item, 'po')}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ₹ {item.purchaseTotal.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    <div className="flex flex-col items-center justify-center w-full">
-                      <select
-                        value={item.paymentStatus}
-                        onChange={(e) =>
-                          setPurchaseData((prevData) =>
-                            prevData.map((dataItem) =>
-                              dataItem.id === item.id
-                                ? {
-                                    ...dataItem,
-                                    paymentStatus: e.target
-                                      .value as PurchaseItem["paymentStatus"],
-                                  }
-                                : dataItem
-                            )
-                          )
-                        }
-                        className={`px-2 py-1 text-xs rounded min-w-[100px] text-center border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500
-                          ${getStatusColor(item.paymentStatus)}`}
-                      >
-                        <option value="Pending">Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Paid">Paid</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    <div className="space-y-1">
-                      {item.fulfillment.map((fulfill, idx) => (
-                        <div
-                          key={idx}
-                          className={`flex items-center justify-between w-full p-1 text-xs rounded-md ${getStatusColor(
-                            fulfill.status
-                          )}`}
-                        >
+                        
+                        <div className={`flex items-center justify-between w-full p-1 text-xs rounded-md ${getStatusColor(getOrderStatus(item, 'pi'))}`}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (fulfill.type === "Fulfilment") {
-                                handleOpenFulfillmentModal(item);
-                              } else if (fulfill.type === "Stock Entry") {
-                                handleOpenVerificationModal(item);
-                              }
+                              handleOpenNewPurchaseModal(item);
+                            }}
+                            className="font-semibold text-left flex-grow focus:outline-none px-1 py-0.5"
+                          >
+                            PI
+                          </button>
+                          <span className="font-semibold text-right px-1 py-0.5">
+                            {getOrderStatus(item, 'pi')}
+                          </span>
+                        </div>
+                        
+                        <div className={`flex items-center justify-between w-full p-1 text-xs rounded-md ${getStatusColor(getOrderStatus(item, 'invoice'))}`}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenNewPurchaseModal(item);
+                            }}
+                            className="font-semibold text-left flex-grow focus:outline-none px-1 py-0.5"
+                          >
+                            Invoice
+                          </button>
+                          <span className="font-semibold text-right px-1 py-0.5">
+                            {getOrderStatus(item, 'invoice')}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatCurrency(item.pricing?.grandTotal || 0)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <div className="flex flex-col items-center justify-center w-full">
+                        <select
+                          value={item.paymentStatus}
+                          onChange={(e) => handleStatusUpdate(item._id, e.target.value)}
+                          className={`px-2 py-1 text-xs rounded min-w-[100px] text-center border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500
+                            ${getStatusColor(item.paymentStatus)}`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="partial">Partial</option>
+                          <option value="completed">Completed</option>
+                          <option value="paid">Paid</option>
+                        </select>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <div className="space-y-1">
+                        <div className={`flex items-center justify-between w-full p-1 text-xs rounded-md ${getStatusColor(item.fulfillmentStatus)}`}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenFulfillmentModal(item);
                             }}
                             className="w-1/2 font-semibold text-left focus:outline-none px-1 py-0.5"
                           >
-                            {fulfill.type}
+                            Fulfilment
                           </button>
+                          <span className="w-1/2 font-semibold text-right px-1 py-0.5">
+                            {item.fulfillmentStatus}
+                          </span>
+                        </div>
+                        
+                        <div className={`flex items-center justify-between w-full p-1 text-xs rounded-md ${getStatusColor(item.status?.stockEntry || 'pending')}`}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              toggleFulfillmentStatus(
-                                item.id,
-                                fulfill.type,
-                                fulfill.status
-                              );
+                              handleOpenVerificationModal(item);
                             }}
-                            className="w-1/2 font-semibold text-right focus:outline-none px-1 py-0.5"
+                            className="w-1/2 font-semibold text-left focus:outline-none px-1 py-0.5"
                           >
-                            {fulfill.status}
+                            Stock Entry
+                          </button>
+                          <span className="w-1/2 font-semibold text-right px-1 py-0.5">
+                            {item.status?.stockEntry || 'Pending'}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between w-full p-1 text-xs rounded-md">
+                          <button
+                            onClick={() => handleOpenAddProductToRackModal(item)}
+                            className="w-full px-2 py-0.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
+                          >
+                            <Plus size={16} className="mr-1" />
+                            Product to Rack
                           </button>
                         </div>
-                      ))}
-                      <div className="flex items-center justify-between w-full p-1 text-xs rounded-md">
-                        <button
-                          onClick={() => handleOpenAddProductToRackModal(null)}
-                          className="w-full px-2 py-0.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
-                        >
-                          <Plus size={20} className="mr-1" />
-                          Product to Rack
-                        </button>
                       </div>
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    <div className="text-gray-900 font-semibold">
-                      {item.date}
-                    </div>
-                    <div className="text-gray-600 text-xs">00:00:00</div>
-                    <div className="text-gray-900 font-semibold">
-                      {item.date}
-                    </div>
-                    <div className="text-gray-600 text-xs">00:00:00</div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    <div className="text-gray-900 font-semibold">
-                      {item.createdBy}
-                    </div>
-                    <div className="text-gray-900 font-semibold">
-                      {item.lastUpdatedBy}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <div className="text-gray-900 font-semibold">
+                        {formatDate(item.createdAt)}
+                      </div>
+                      <div className="text-gray-600 text-xs">
+                        {formatDate(item.updatedAt)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <div className="text-gray-900 font-semibold">
+                        {item.store}
+                      </div>
+                      <div className="text-gray-600 text-xs truncate max-w-32">
+                        {item.notes}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           )}
           
@@ -1020,7 +636,7 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
           {!loading && !error && filteredPurchases.length > 0 && pagination && (
             <div className="mt-4 flex justify-between items-center px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
               <Pagination
-                currentPage={pagination.page}
+                currentPage={pagination.current || pagination.page}
                 totalPages={pagination.pages}
                 totalItems={pagination.total}
                 itemsPerPage={pagination.limit}
@@ -1032,15 +648,13 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
         </div>
       </div>
 
-      {/* Button to open AddProductToRackModal - placed outside the table for better structure */}
-
       <Calendar
         isOpen={isCalendarOpen}
         onClose={() => setIsCalendarOpen(false)}
         onApply={handleDateRangeApply}
       />
       
-      {/* New Purchase Modal */}
+      {/* Modals */}
       {isNewPurchaseModalOpen && (
         <NewPurchaseModal
           isOpen={isNewPurchaseModalOpen}
@@ -1048,7 +662,6 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
         />
       )}
 
-      {/* Fulfillment Modal */}
       {isFulfillmentModalOpen && selectedPurchaseDetails && (
         <FulfillmentModal
           isOpen={isFulfillmentModalOpen}
@@ -1057,7 +670,6 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
         />
       )}
 
-      {/* Verification Modal */}
       {isVerificationModalOpen && selectedPurchaseDetails && (
         <VerificationModal
           isOpen={isVerificationModalOpen}
@@ -1066,13 +678,11 @@ const handleOpenNewPurchaseModal = (itemDetails: PurchaseItem["details"] | null 
         />
       )}
 
-      {/* Add Product To Rack Modal */}
       {isAddProductToRackModalOpen && (
         <AddProductToRackModal
           isOpen={isAddProductToRackModalOpen}
           onClose={handleCloseAddProductToRackModal}
           onSave={(productsData) => {
-            // Transform the data to match the API format
             if (productsData.length > 0 && productsData[0].tempId) {
               const rackAssignments = productsData[0].rackQuantities.map(rq => ({
                 rack: rq.rackId,
