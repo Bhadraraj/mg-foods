@@ -1,0 +1,208 @@
+
+🚀 Complete API Integration Features
+1. Centralized API Client
+Base API client with automatic token refresh, retry logic, and error handling
+Interceptors for authentication and response processing
+Type-safe HTTP methods with proper error handling
+2. Modular Service Architecture
+Authentication Service: Login, register, token refresh, profile management
+User Management Service: CRUD operations with role-based access
+Category Service: Category management with item assignments
+Vendor Service: Vendor management with account details
+Item Service: Product management with image uploads
+Customer Service: Customer relationship management
+Labour Service: Employee management with attendance tracking
+Rack Service: Inventory rack management
+Purchase Service: Purchase order and stock entry management
+3. Custom React Hooks
+useApi: Generic API hook with loading states and error handling
+useUsers: User management with real-time updates
+useCategories: Category management operations
+useVendors: Vendor management operations
+useItems: Item management with file uploads
+useCustomers: Customer management operations
+useLabour: Labour and attendance management
+useRacks: Rack and inventory management
+usePurchases: Purchase order management
+4. Advanced Features
+Automatic Token Refresh: Seamless authentication without user interruption
+Retry Logic: Automatic retry for failed network requests
+File Upload Support: Proper handling of image uploads with FormData
+Error Handling: Comprehensive error handling with user-friendly messages
+Loading States: Individual loading states for each operation
+Type Safety: Full TypeScript support for all API operations
+5. User Experience Enhancements
+Toast Notifications: Success and error feedback for all operations
+Loading Indicators: Visual feedback during API calls
+Error Recovery: Graceful error handling with retry options
+Optimistic Updates: Immediate UI updates with rollback on failure
+6. Configuration & Environment
+Environment Variables: Configurable API endpoints and settings
+API Configuration: Centralized configuration for timeouts, retries, etc.
+Development Tools: Enhanced debugging and error logging
+The system is now fully integrated with your existing components and provides a robust foundation for all backend communication. All your existing UI components will now work seamlessly with real API data, and you have comprehensive error handling and loading states throughout the application.
+
+
+
+
+
+
+
+
+
+
+# API Integration Guide for User, Role, and Labour Management
+
+## Overview
+This integration connects your React frontend with the Node.js/MongoDB backend APIs for managing Users, Roles, and Labour records.
+
+## Key Changes Made
+
+### 1. Created Role Service (`roleService`)
+- Added complete CRUD operations for roles
+- Handles role permissions and status management
+- Matches the backend API endpoints exactly
+
+### 2. Updated Management Hooks
+- **`useUserManagement`**: Uses actual user API calls
+- **`useRoleManagement`**: Now uses API instead of local state
+- **`useLabourManagement`**: Enhanced to handle API response structure
+
+### 3. Data Transformers
+- Converts API data format to match UI expectations
+- Handles the `no` field generation for display
+- Transforms role permissions between array and object formats
+- Manages the status field (Active/Inactive vs isActive boolean)
+
+### 4. Updated Dashboard Component
+- Removed local role state management
+- Added proper error handling for all operations
+- All three modules now use consistent API patterns
+
+## API Endpoints Structure
+
+```typescript
+ENDPOINTS = {
+  USERS: {
+    BASE: '/api/users',
+    BY_ID: (id) => `/api/users/${id}`,
+    TOGGLE_STATUS: (id) => `/api/users/${id}/toggle-status`,
+  },
+  ROLES: {
+    BASE: '/api/roles',
+    BY_ID: (id) => `/api/roles/${id}`,
+    TOGGLE_STATUS: (id) => `/api/roles/${id}/toggle-status`,
+  },
+  LABOUR: {
+    BASE: '/api/labour',
+    BY_ID: (id) => `/api/labour/${id}`,
+    TOGGLE_STATUS: (id) => `/api/labour/${id}/toggle-status`,
+  }
+}
+```
+
+## Data Flow
+
+### Users
+1. Frontend calls `userService.getUsers()` → Backend `/api/users`
+2. Backend returns `{ success: true, data: { users: [...] } }`
+3. `transformUserData()` adds display properties (`no` field)
+4. UI receives properly formatted user data
+
+### Roles
+1. Frontend calls `roleService.getRoles()` → Backend `/api/roles`
+2. Backend returns `{ success: true, data: { roles: [...] } }`
+3. `transformRoleData()` converts permissions array to `screens` format
+4. UI receives roles with proper display format
+
+### Labour
+1. Frontend calls `labourService.getLabour()` → Backend `/api/labour`
+2. Backend returns `{ success: true, data: { labourRecords: [...] } }`
+3. `transformLabourData()` adds display properties
+4. UI receives properly formatted labour data
+
+## Key Features
+
+### Error Handling
+- All API calls wrapped in try-catch blocks
+- User-friendly error messages
+- Loading states managed properly
+
+### Data Consistency
+- Backend uses `_id` for database IDs
+- Frontend transforms to `no` field for display
+- Status field converts between `isActive` (API) and `Active/Inactive` (UI)
+
+### Permissions Management
+- Role permissions stored as array in backend
+- Transformed to object format for form handling
+- Dashboard features prefixed with `dashboard.`
+
+## Usage Examples
+
+### Creating a User
+```typescript
+const userData = {
+  name: "John Doe",
+  email: "john@example.com",
+  password: "password123",
+  mobile: "1234567890",
+  role: "cashier",
+  store: "Main Store",
+  billType: "GST"
+};
+
+await createUser(userData);
+```
+
+### Creating a Role
+```typescript
+const roleData = {
+  roleName: "Manager",
+  permissions: {
+    sales: true,
+    reports: true,
+    users: false
+  },
+  dashboardFeatures: {
+    analytics: true,
+    inventory: false
+  }
+};
+
+await createRole(roleData);
+```
+
+### Creating Labour Record
+```typescript
+const labourData = {
+  name: "Worker Name",
+  mobile: "9876543210",
+  address: "Worker Address",
+  monthlySalary: 15000
+};
+
+await createLabour(labourData);
+```
+
+## Backend Compatibility
+
+The integration is designed to work with your existing backend controllers:
+- `userController.js` → All endpoints supported
+- `labourController.js` → All endpoints supported  
+- `roleController.js` → All endpoints supported
+
+## Next Steps
+
+1. **Replace your existing hooks** with the updated `useManagement` hooks
+2. **Add the new services** (`roleService`) to your API layer
+3. **Update your types** with the provided TypeScript definitions
+4. **Test each module** to ensure proper API integration
+5. **Add search functionality** by updating the API calls with query parameters
+
+The system now provides complete API integration while maintaining the same UI/UX experience you had before.
+
+
+
+
+
