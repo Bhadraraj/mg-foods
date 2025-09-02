@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { vendorService, Vendor, VendorFilters, CreateVendorData, UpdateVendorData } from '../services/api/vendor';
 import { useApiQuery, useApiMutation } from './useApi';
 
@@ -15,6 +15,12 @@ export const useVendors = (options: UseVendorsOptions = {}) => {
   });
 
   const { autoFetch = true, ...fetchOptions } = options;
+  const fetchOptionsRef = useRef(fetchOptions);
+  
+  // Update ref when fetchOptions change
+  useEffect(() => {
+    fetchOptionsRef.current = fetchOptions;
+  }, [fetchOptions]);
 
   const {
     data: vendorsData,
@@ -49,14 +55,20 @@ export const useVendors = (options: UseVendorsOptions = {}) => {
     onSuccess: () => fetchVendorsData(),
   });
 
+  // Remove pagination from dependencies to avoid infinite loop
   const fetchVendorsData = useCallback(async (customOptions?: Partial<UseVendorsOptions>) => {
-    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
+    const params = { 
+      ...fetchOptionsRef.current, 
+      ...customOptions, 
+      page: pagination.page, 
+      limit: pagination.limit 
+    };
     const response = await fetchVendors(() => vendorService.getVendors(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchVendors, pagination.page, pagination.limit]);
+  }, [fetchVendors]); // Only depend on fetchVendors
 
   const createVendor = useCallback(async (data: CreateVendorData): Promise<void> => {
     await createVendorMutation(() => vendorService.createVendor(data));
@@ -67,7 +79,7 @@ export const useVendors = (options: UseVendorsOptions = {}) => {
   }, [updateVendorMutation]);
 
   const deleteVendor = useCallback(async (id: string): Promise<void> => {
-    await deleteVendorMutation(() => vendorService.deleteVendor(id));
+    await deleteVendorMutation(() => vendorService.deleteVendor(id, data));
   }, [deleteVendorMutation]);
 
   const handlePageChange = useCallback((page: number) => {
@@ -78,11 +90,19 @@ export const useVendors = (options: UseVendorsOptions = {}) => {
     setPagination(prev => ({ ...prev, limit, page: 1 }));
   }, []);
 
+  // Separate effect for initial fetch
   useEffect(() => {
     if (autoFetch) {
       fetchVendorsData();
     }
-  }, [fetchVendorsData, autoFetch, pagination.page, pagination.limit]);
+  }, [autoFetch]); // Only run on mount when autoFetch is true
+
+  // Separate effect for pagination changes
+  useEffect(() => {
+    if (autoFetch && (pagination.page !== 1 || pagination.limit !== 20)) {
+      fetchVendorsData();
+    }
+  }, [pagination.page, pagination.limit]); // Only trigger when pagination actually changes
 
   return {
     vendors: vendorsData?.vendors || [],

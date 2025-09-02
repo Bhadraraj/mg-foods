@@ -8,3 +8,4 @@ export * from './recipe';
 export * from './party';
 export * from './offers';
 export * from './reports';
+export * from './category';

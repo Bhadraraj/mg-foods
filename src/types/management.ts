@@ -1,35 +1,9 @@
-export interface ApiResponse<T = any> {
-  success: boolean;
-  message?: string;
-  data: T;
-  count?: number;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-
-export interface User {
-  _id: string;
-  no: string; // For display purposes
-  name: string;
-  email: string;
-  mobile: string;
-  role: string;
-  store: string;
-  billType: string;
-  permissions?: string[];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+ 
+ 
 
 export interface Role {
   _id: string;
-  no: string; // For display purposes
+  no: string; 
   roleName: string;
   permissions: string[];
   screens: ScreenPermission[]; // For display in UI

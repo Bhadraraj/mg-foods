@@ -19,7 +19,7 @@ import {
   Referrer, AddEditReferrerFormData,
   Labour, AddEditLabourFormData,
   AttendanceRecord
-} from '../../components/types/index';
+} from '../../types/index';
 
 const PartyManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('customer');
@@ -304,7 +304,7 @@ const PartyManagement: React.FC = () => {
           >
             <Plus size={20} />
           </button>
-        </div> as JSX.Element
+        </div> 
       </div> 
       {activeTab === 'customer' && (
         <CustomerTable

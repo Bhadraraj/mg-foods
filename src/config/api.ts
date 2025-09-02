@@ -35,12 +35,12 @@ export const ENDPOINTS = {
   },
   
   // Category Management
-  CATEGORIES: {
+ CATEGORIES: {
     BASE: '/categories',
     BY_ID: (id: string) => `/categories/${id}`,
-    ITEMS: (id: string) => `/categories/${id}/items`,
+    ASSIGN_ITEMS: (categoryId: string) => `/categories/${categoryId}/items`,
   },
-  
+
   // Vendor Management
   VENDORS: {
     BASE: '/vendors',
@@ -87,5 +87,49 @@ export const ENDPOINTS = {
     BY_ID: (id: string) => `/purchases/${id}`,
     STATUS: (id: string) => `/purchases/${id}/status`,
     STOCK_ENTRY: (id: string) => `/purchases/${id}/stock-entry`,
+  },
+
+   // New endpoints for Offers, Coupons, and Referrer Points
+  OFFERS: {
+    BASE: '/offers',
+    BY_ID: (id: string) => `/offers/${id}`,
+    TOGGLE_STATUS: (id: string) => `/offers/${id}/toggle-status`,
+  },
+
+  COUPONS: {
+    BASE: '/coupons',
+    BY_ID: (id: string) => `/coupons/${id}`,
+    TOGGLE_STATUS: (id: string) => `/coupons/${id}/toggle-status`,
+    VALIDATE: '/coupons/validate',
+    APPLY: '/coupons/apply',
+  },
+TABLES: {
+    BASE: '/tables',
+    BY_ID: (id: string) => `/tables/${id}`,
+    CREATE_CHILD: (parentId: string) => `/tables/${parentId}/child`,
+    UPDATE_STATUS: (id: string) => `/tables/${id}/status`,
+    STATS: '/tables/stats',
+  },
+  TOKENS: {
+    BASE: '/tokens',
+    BY_ID: (id: string) => `/tokens/${id}`,
+    UPDATE_PAYMENT: (id: string) => `/tokens/${id}/payment`,
+    CANCEL: (id: string) => `/tokens/${id}/cancel`,
+    // STATS: '/tokens/stats',
+  },
+   KOTS: {
+    BASE: '/kots',
+    BY_ID: (id: string) => `/kots/${id}`,
+    ITEM_STATUS: (kotId: string, kotItemId: string) => `/kots/${kotId}/items/${kotItemId}/status`,
+    STATS: '/kots/stats',
+  },
+  
+  REFERRER_POINTS: {
+    BASE: '/referrer-points',
+    BY_ID: (id: string) => `/referrer-points/${id}`,
+    SUMMARY: '/referrer-points/summary',
+    BY_REFERRER: (referrerId: string) => `/referrer-points/referrer/${referrerId}`,
+    REDEEM: '/referrer-points/redeem',
+    BALANCE: (referrerId: string) => `/referrer-points/balance/${referrerId}`,
   },
 } as const;

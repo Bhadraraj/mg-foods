@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Calendar, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, X, ChevronLeft, ChevronRight, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { useKots, useKotStats } from '../../hooks/useKot';
+import { Kot, KotItem as ApiKotItem } from '../../services/api/kot';
 
 interface CalendarProps {
   isOpen: boolean;
@@ -168,11 +170,9 @@ const CalendarModal: React.FC<CalendarProps> = ({
         </div>
         <div className="flex flex-col sm:flex-row justify-between mb-6 gap-6">
           <div className="flex-1">
-            {/* <h4 className="text-sm font-medium text-gray-700 mb-2">Sales from</h4> */}
             {renderCalendar(fromMonth, fromYear, fromDate, (date) => handleDateSelection(date, 'from'), setFromMonth, setFromYear)}
           </div>
           <div className="flex-1">
-            {/* <h4 className="text-sm font-medium text-gray-700 mb-2">Sales to</h4> */}
             {renderCalendar(toMonth, toYear, toDate, (date) => handleDateSelection(date, 'to'), setToMonth, setToYear)}
           </div>
         </div>
@@ -202,140 +202,57 @@ const CalendarModal: React.FC<CalendarProps> = ({
   );
 };
 
-interface KotItem {
-  name: string;
-  quantity: string;
-  isCompleted: boolean; 
-}
-
-interface KotData {
-  id: string;
-  dineType: string;
-  customerName: string;
-  tableNumber: string;
-  time: string;
-  items: KotItem[];
-  status: "New" | "Completed"; 
-}
-
-const Kot: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("all"); 
+const KotComponent: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all');
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [selectedFromDate, setSelectedFromDate] = useState(new Date());
   const [selectedToDate, setSelectedToDate] = useState(new Date());
-  const [kots, setKots] = useState<KotData[]>([
-    {
-      id: "#21",
-      dineType: "Dine in (A8)",
-      customerName: "Ram Kishore",
-      tableNumber: "17:12", 
-      time: "12:02 pm",
-      items: [
-        { name: "Veg Meals", quantity: "01", isCompleted: false },
-        { name: "Biriyani", quantity: "01", isCompleted: false },
-        { name: "Mutton Soup", quantity: "02", isCompleted: false },
-        { name: "Chicken Tikka", quantity: "01", isCompleted: false },
-        { name: "Garlic Naan", quantity: "02", isCompleted: false },
-      ],
-      status: "New",
-    },
-    {
-      id: "#22",
-      dineType: "Dine in (A9)",
-      customerName: "John Doe",
-      tableNumber: "18:15",
-      time: "12:30 pm",
-      items: [
-        { name: "Chicken Curry", quantity: "01", isCompleted: false },
-        { name: "Naan", quantity: "02", isCompleted: false },
-        { name: "Dal Tadka", quantity: "01", isCompleted: false },
-        { name: "Jeera Rice", quantity: "01", isCompleted: false },
-        { name: "Raita", quantity: "01", isCompleted: false },
-      ],
-      status: "New",
-    },
-    {
-      id: "#23",
-      dineType: "Take Away",
-      customerName: "Sarah Smith",
-      tableNumber: "19:20",
-      time: "01:15 pm",
-      items: [
-        { name: "Fish Fry", quantity: "01", isCompleted: false },
-        { name: "Rice", quantity: "01", isCompleted: false },
-        { name: "Fish Curry", quantity: "01", isCompleted: false },
-        { name: "Pickle", quantity: "01", isCompleted: false },
-        { name: "Papad", quantity: "02", isCompleted: false },
-      ],
-      status: "New",
-    }, 
-    {
-      id: "#24",
-      dineType: "Dine in (B1)",
-      customerName: "Alice Johnson",
-      tableNumber: "20:00",
-      time: "02:00 pm",
-      items: [
-        { name: "Coffee", quantity: "01", isCompleted: true },
-        { name: "Samosa", quantity: "02", isCompleted: true },
-        { name: "Masala Tea", quantity: "01", isCompleted: true },
-        { name: "Vada Pav", quantity: "01", isCompleted: true },
-        { name: "Chutney", quantity: "01", isCompleted: true },
-      ],
-      status: "Completed",
-    },
-  ]); 
-  
-  const totalOrders = kots.length; 
-  const remainingOrders = kots.filter((kot) => kot.status === "New").length;
-  const completedOrders = kots.filter(
-    (kot) => kot.status === "Completed"
-  ).length;
- 
-  const toggleItemCompletion = (kotId: string, itemIndex: number) => {
-    setKots((prevKots) =>
-      prevKots.map((kot) => {
-        if (kot.id === kotId) {
-          const updatedItems = kot.items.map((item, idx) =>
-            idx === itemIndex
-              ? { ...item, isCompleted: !item.isCompleted }
-              : item
-          ); 
-          const allItemsCompleted = updatedItems.every(
-            (item) => item.isCompleted
-          );
-          return {
-            ...kot,
-            items: updatedItems, 
-            status: allItemsCompleted ? "Completed" : "New",  
-          };
-        }
-        return kot;
-      })
-    );
-  };
- 
-  const handleRemoveKot = (kotId: string) => {
-    setKots((prevKots) => prevKots.filter((kot) => kot.id !== kotId));
-  };
- 
-  const getStatusButtonClass = (status: KotData["status"]) => {
-    switch (status) {
-      case "Completed":
-        return "bg-green-600 text-white hover:bg-green-700"; 
-      case "New":
-        return "bg-blue-600 text-white cursor-not-allowed opacity-70";  
-      default:
-        return "bg-gray-400 text-white cursor-not-allowed opacity-70"; 
-    }
+
+  // Use the actual API hooks with proper filtering
+  const {
+    kots,
+    loading: kotsLoading,
+    error: kotsError,
+    fetchKots,
+    updateKotItemStatus,
+    deleteKot,
+    updateItemStatusLoading,
+    deleteLoading,
+    pagination,
+    handlePageChange
+  } = useKots({
+    status: activeTab === 'all' ? undefined : activeTab,
+    page: 1,
+    limit: 50,
+    autoFetch: true
+  });
+
+  const {
+    stats,
+    loading: statsLoading,
+    error: statsError,
+    refetch: refetchStats
+  } = useKotStats();
+
+  // Refetch KOTs when active tab changes
+  useEffect(() => {
+    fetchKots({
+      status: activeTab === 'all' ? undefined : activeTab,
+      page: 1,
+      limit: 50
+    });
+  }, [activeTab]);
+
+  // Format time from ISO string
+  const formatTime = (isoString: string) => {
+    return new Date(isoString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
-  const handleDateChange = (fromDate: Date, toDate: Date) => {
-    setSelectedFromDate(fromDate);
-    setSelectedToDate(toDate);
-    // You can add logic here to filter KOTs by date range
-  };
-
+  // Format date for display
   const formatDisplayDate = (fromDate: Date, toDate: Date) => {
     const formatDate = (date: Date) => {
       return date.toLocaleDateString('en-US', { 
@@ -350,13 +267,123 @@ const Kot: React.FC = () => {
     
     return `${formatDate(fromDate)} - ${formatDate(toDate)}`;
   };
- 
-  const filteredKots = kots.filter((kot) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "new") return kot.status === "New";
-    if (activeTab === "completed") return kot.status === "Completed";
-    return true;
-  });
+
+  // Get status button styling
+  const getItemStatusClass = (status: ApiKotItem['status']) => {
+    switch (status) {
+      case 'served':
+        return 'bg-green-100 text-green-800';
+      case 'ready':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'preparing':
+        return 'bg-orange-100 text-orange-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+    }
+  };
+
+  const getKotStatusButtonClass = (kot: Kot) => {
+    if (kot.status === 'completed') {
+      return 'bg-green-600 text-white cursor-not-allowed opacity-70';
+    }
+    return 'bg-blue-600 text-white hover:bg-blue-700';
+  };
+
+  // Handle item status toggle
+  const handleItemStatusToggle = async (kotId: string, item: ApiKotItem) => {
+    if (updateItemStatusLoading || item.status === 'served' || item.status === 'cancelled') return;
+
+    let newStatus: ApiKotItem['status'];
+    
+    switch (item.status) {
+      case 'pending':
+        newStatus = 'preparing';
+        break;
+      case 'preparing':
+        newStatus = 'ready';
+        break;
+      case 'ready':
+        newStatus = 'served';
+        break;
+      default:
+        return;
+    }
+
+    try {
+      await updateKotItemStatus(kotId, item._id, { status: newStatus });
+      // Refresh stats after successful update
+      refetchStats();
+    } catch (error) {
+      console.error('Failed to update item status:', error);
+    }
+  };
+
+  // Handle KOT completion
+  const handleCompleteKot = async (kotId: string) => {
+    if (deleteLoading) return;
+    
+    try {
+      await deleteKot(kotId);
+      // Refresh stats after completion
+      refetchStats();
+    } catch (error) {
+      console.error('Failed to complete KOT:', error);
+    }
+  };
+
+  // Handle date filter changes
+  const handleDateChange = (fromDate: Date, toDate: Date) => {
+    setSelectedFromDate(fromDate);
+    setSelectedToDate(toDate);
+    
+    // Refetch with new date filters if your API supports date filtering
+    fetchKots({
+      status: activeTab === 'all' ? undefined : activeTab,
+      page: 1,
+      limit: 50,
+      // Add these if your API supports date filtering:
+      // startDate: fromDate.toISOString(),
+      // endDate: toDate.toISOString(),
+    });
+  };
+
+  // Refresh data
+  const handleRefresh = () => {
+    fetchKots({
+      status: activeTab === 'all' ? undefined : activeTab,
+      page: 1,
+      limit: 50
+    });
+    refetchStats();
+  };
+
+  // Calculate stats
+  const totalOrders = stats?.overview.totalKOTs || 0;
+  const activeOrders = stats?.overview.activeKOTs || 0;
+  const completedOrders = stats?.overview.completedKOTs || 0;
+
+  // Handle errors
+  if (kotsError || statsError) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading KOTs</h3>
+          <p className="text-gray-500 mb-4">
+            {kotsError || statsError || 'Something went wrong while loading the data.'}
+          </p>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen"> 
@@ -365,124 +392,233 @@ const Kot: React.FC = () => {
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-semibold text-gray-800">KOT</h1>
-           
+              <button
+                onClick={handleRefresh}
+                disabled={kotsLoading || statsLoading}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                title="Refresh data"
+              >
+                <RefreshCw size={16} className={`${(kotsLoading || statsLoading) ? 'animate-spin' : ''}`} />
+              </button>
             </div>
  
             <div className="flex gap-4">
-                 <button
+              <button
                 onClick={() => setIsDateModalOpen(true)}
                 className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition-colors"
               >
                 <Calendar size={16} />
                 <span className="text-sm font-medium">{formatDisplayDate(selectedFromDate, selectedToDate)}</span>
               </button>
+              
               <div
-                className={`bg-white border border-gray-200 rounded-lg px-4 py-2 cursor-pointer ${
+                className={`bg-white border border-gray-200 rounded-lg px-4 py-2 cursor-pointer transition-all ${
                   activeTab === "all" ? "ring-2 ring-blue-500" : ""
                 }`}
                 onClick={() => setActiveTab("all")}
               >
                 <span className="text-gray-600">Total Orders : </span>
                 <span className="font-semibold text-gray-800">
-                  {totalOrders.toString().padStart(2, "0")}
+                  {statsLoading ? '--' : totalOrders.toString().padStart(2, "0")}
                 </span>
               </div>
+              
               <div
-                className={`bg-blue-600 text-white rounded-lg px-4 py-2 cursor-pointer ${
-                  activeTab === "new" ? "ring-2 ring-blue-300" : ""
+                className={`bg-blue-600 text-white rounded-lg px-4 py-2 cursor-pointer transition-all ${
+                  activeTab === "active" ? "ring-2 ring-blue-300" : ""
                 }`}
-                onClick={() => setActiveTab("new")}
+                onClick={() => setActiveTab("active")}
               >
-                <span>Remaining Orders : </span>
+                <span>Active Orders : </span>
                 <span className="font-semibold">
-                  {remainingOrders.toString().padStart(2, "0")}
+                  {statsLoading ? '--' : activeOrders.toString().padStart(2, "0")}
                 </span>
               </div>
+              
               <div
-                className={`bg-white border border-gray-200 rounded-lg px-4 py-2 cursor-pointer ${
+                className={`bg-white border border-gray-200 rounded-lg px-4 py-2 cursor-pointer transition-all ${
                   activeTab === "completed" ? "ring-2 ring-blue-500" : ""
                 }`}
                 onClick={() => setActiveTab("completed")}
               >
                 <span className="text-gray-600">Completed Orders : </span>
                 <span className="font-semibold text-gray-800">
-                  {completedOrders.toString().padStart(2, "0")}
+                  {statsLoading ? '--' : completedOrders.toString().padStart(2, "0")}
                 </span>
               </div>
             </div>
           </div>
         </div>
       </div> 
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredKots.map((kot) => (
-            <div
-              key={kot.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-            > 
-              <div className="bg-blue-600 text-white p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-semibold text-sm">{kot.dineType}</h3>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-sm">KOT No {kot.id} </span>
-                      <span className="text-yellow-300 font-medium">
-                        {kot.customerName}
-                      </span>
+        {kotsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading KOTs...</span>
+          </div>
+        ) : kots.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-500 text-lg mb-2">No KOTs found</div>
+            <p className="text-gray-400">
+              {activeTab === 'all' 
+                ? 'No orders available for the selected date range.'
+                : `No ${activeTab} orders found.`
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {kots.map((kot) => (
+              <div
+                key={kot._id}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+              > 
+                <div className="bg-blue-600 text-white p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm">{kot.kotType}</h3>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-sm">{kot.kotNumber}</span>
+                        <span className="text-yellow-300 font-medium text-sm">
+                          {kot.customerDetails.name}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`text-xs px-2 py-1 rounded-full ${
+                      kot.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                    }`}>
+                      {kot.status}
                     </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span>{kot.tableNumber}</span>
-                  <span>{kot.time}</span>
-                </div>
-              </div> 
-              <div className="p-4">
-                <div className="space-y-3 h-32 overflow-y-auto">
-                   {kot.items.map((item, itemIndex) => (
-                    <button
-                      key={itemIndex}
-                      onClick={() => toggleItemCompletion(kot.id, itemIndex)}
-                      disabled={kot.status === "Completed"} 
-                      className={`flex justify-between items-center w-full py-2 px-3 rounded-md transition-colors duration-200
-                  ${
-                    item.isCompleted
-                      ? "bg-green-100 text-green-800"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                    >
-                      <span
-                        className={`${item.isCompleted ? "line-through" : ""}`}
-                      >
-                        {item.name}
-                      </span>
-                      <span
-                        className={`font-semibold ${
-                          item.isCompleted ? "text-green-800" : "text-gray-900"
-                        }`}
-                      >
-                        {item.quantity}
-                      </span>
-                    </button>
-                  ))}
+                  <div className="flex justify-between items-center text-sm">
+                    <span>Table: {kot.tableNumber}</span>
+                    <span>{formatTime(kot.createdAt)}</span>
+                  </div>
+                  {kot.notes && (
+                    <div className="mt-2 text-xs text-blue-100">
+                      Note: {kot.notes}
+                    </div>
+                  )}
                 </div> 
-                <div className="mt-6">
-                  <button
-                    onClick={() => handleRemoveKot(kot.id)} 
-                    disabled={kot.status === "New"}
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${getStatusButtonClass(
-                      kot.status
-                    )}`}
-                  >
-                    {kot.status === "Completed"
-                      ? "Completed "
-                      : "Mark Completed"}
-                  </button>
+
+                <div className="p-4">
+                  <div className="space-y-3 h-32 overflow-y-auto">
+                    {kot.items.map((item) => (
+                      <button
+                        key={item._id}
+                        onClick={() => handleItemStatusToggle(kot._id, item)}
+                        disabled={
+                          kot.status === 'completed' || 
+                          item.status === 'served' || 
+                          item.status === 'cancelled' ||
+                          updateItemStatusLoading
+                        }
+                        className={`flex justify-between items-center w-full py-2 px-3 rounded-md transition-colors duration-200 ${getItemStatusClass(item.status)} ${
+                          updateItemStatusLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        } ${item.status === 'served' || item.status === 'cancelled' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        <div className="flex-1 text-left">
+                          <div className={`text-sm font-medium ${
+                            item.status === 'served' || item.status === 'cancelled' ? 'line-through' : ''
+                          }`}>
+                            {item.itemName}
+                          </div>
+                          {item.variant && (
+                            <div className="text-xs opacity-75 mt-1">
+                              {item.variant}
+                            </div>
+                          )}
+                          {item.kotNote && (
+                            <div className="text-xs opacity-75 mt-1">
+                              Note: {item.kotNote}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-1 rounded-full bg-white bg-opacity-50 capitalize">
+                            {item.status}
+                          </span>
+                          <span className={`font-semibold ${
+                            item.status === 'served' || item.status === 'cancelled' ? 'line-through' : ''
+                          }`}>
+                            {item.quantity}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div> 
+
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm text-gray-600">Total Amount:</span>
+                      <span className="font-semibold text-lg">₹{kot.calculatedTotal}</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-3 text-xs text-gray-500">
+                      <span>Order: {kot.orderReference}</span>
+                      <span>{kot.customerDetails.mobile}</span>
+                    </div>
+                    <button
+                      onClick={() => handleCompleteKot(kot._id)}
+                      disabled={kot.status === 'completed' || deleteLoading}
+                      className={`w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${getKotStatusButtonClass(kot)} ${
+                        deleteLoading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {deleteLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {kot.status === 'completed' ? 'Completed' : 'Mark Complete'}
+                    </button>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {pagination && pagination.pages > 1 && (
+          <div className="mt-8 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} KOTs
             </div>
-          ))}
-        </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+                className="px-3 py-1 rounded bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              
+              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                const pageNum = i + Math.max(1, pagination.page - 2);
+                if (pageNum > pagination.pages) return null;
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-3 py-1 rounded ${
+                      pagination.page === pageNum
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.pages}
+                className="px-3 py-1 rounded bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Date Modal */}
@@ -497,4 +633,4 @@ const Kot: React.FC = () => {
   );
 };
 
-export default Kot;
+export default KotComponent;

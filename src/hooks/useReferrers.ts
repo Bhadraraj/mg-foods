@@ -1,21 +1,34 @@
-import { useState, useCallback } from 'react';
-import { useApiQuery, useApiMutation } from './useApi';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { referrerService } from '../services/api';
 import { Referrer } from '../types/party';
-import { ApiResponse } from '../types';
+import { useApiQuery, useApiMutation } from './useApi';
 
-interface UseReferrersOptions {
+interface ReferrerFilters {
+  search?: string;
+  status?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+interface UseReferrersOptions extends ReferrerFilters {
   initialPage?: number;
   initialLimit?: number;
-  initialSearch?: string;
+  autoFetch?: boolean;
 }
 
 export const useReferrers = (options: UseReferrersOptions = {}) => {
   const {
     initialPage = 1,
     initialLimit = 10,
-    initialSearch = '',
+    autoFetch = true,
+    ...fetchOptions
   } = options;
+
+  const optionsRef = useRef(fetchOptions);
+  
+  useEffect(() => {
+    optionsRef.current = fetchOptions;
+  }, [JSON.stringify(fetchOptions)]);
 
   const [pagination, setPagination] = useState({
     page: initialPage,
@@ -24,67 +37,77 @@ export const useReferrers = (options: UseReferrersOptions = {}) => {
     pages: 0,
   });
 
-  const [filters, setFilters] = useState({
-    search: initialSearch,
-    status: true,
-    sortBy: 'createdAt',
-    sortOrder: 'desc' as 'asc' | 'desc',
+  const {
+    data: referrersData,
+    loading,
+    error,
+    execute: fetchReferrersQuery,
+  } = useApiQuery<{ referrers: Referrer[] }>({
+    showSuccessToast: false,
   });
 
-  // Fetch referrers with pagination
-  const { data, isLoading, error, refetch } = useApiQuery<ApiResponse<{ referrers: Referrer[] }>>(
-    ['referrers', pagination.page, pagination.limit, filters],
-    () => referrerService.getReferrers({
+  const fetchReferrersData = useCallback(async (customOptions?: Partial<UseReferrersOptions>) => {
+    const params = {
+      ...optionsRef.current,
+      ...customOptions,
       page: pagination.page,
       limit: pagination.limit,
-      search: filters.search,
-      status: filters.status,
-      sortBy: filters.sortBy,
-      sortOrder: filters.sortOrder,
-    }),
-    {
-      onSuccess: (data) => {
-        if (data.pagination) {
-          setPagination({
-            page: data.pagination.page,
-            limit: data.pagination.limit,
-            total: data.pagination.total,
-            pages: data.pagination.pages,
-          });
-        }
-      },
+    };
+
+    try {
+      const response = await fetchReferrersQuery(() => referrerService.getReferrers(params));
+      
+      if (response?.pagination) {
+        setPagination(response.pagination);
+      }
+      return response;
+    } catch (err) {
+      console.error('Error fetching referrers:', err);
+      throw err;
     }
-  );
+  }, [fetchReferrersQuery, pagination.page, pagination.limit]);
 
   // Create referrer mutation
-  const createReferrerMutation = useApiMutation(
-    (data: any) => referrerService.createReferrer(data),
-    {
-      onSuccess: () => {
-        refetch();
-      },
-    }
-  );
+  const {
+    execute: createReferrerMutation,
+    loading: createLoading,
+  } = useApiMutation({
+    successMessage: 'Referrer created successfully',
+    onSuccess: () => {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchReferrersData();
+    },
+  });
 
   // Update referrer mutation
-  const updateReferrerMutation = useApiMutation(
-    ({ id, data }: { id: string; data: any }) => referrerService.updateReferrer(id, data),
-    {
-      onSuccess: () => {
-        refetch();
-      },
-    }
-  );
+  const {
+    execute: updateReferrerMutation,
+    loading: updateLoading,
+  } = useApiMutation({
+    successMessage: 'Referrer updated successfully',
+    onSuccess: () => fetchReferrersData(),
+  });
 
   // Delete referrer mutation
-  const deleteReferrerMutation = useApiMutation(
-    (id: string) => referrerService.deleteReferrer(id),
-    {
-      onSuccess: () => {
-        refetch();
-      },
-    }
-  );
+  const {
+    execute: deleteReferrerMutation,
+    loading: deleteLoading,
+  } = useApiMutation({
+    successMessage: 'Referrer deleted successfully',
+    onSuccess: () => fetchReferrersData(),
+  });
+
+  const createReferrer = useCallback(async (data: any): Promise<void> => {
+    await createReferrerMutation(() => referrerService.createReferrer(data));
+  }, [createReferrerMutation]);
+
+  const updateReferrer = useCallback(async (id: string, data: any): Promise<void> => {
+    await updateReferrerMutation(() => referrerService.updateReferrer(id, data));
+  }, [updateReferrerMutation]);
+
+  const deleteReferrer = useCallback(async (id: string): Promise<void> => {
+    await deleteReferrerMutation(() => referrerService.deleteReferrer(id));
+  }, [deleteReferrerMutation]);
 
   // Handle page change
   const handlePageChange = useCallback((page: number) => {
@@ -98,30 +121,45 @@ export const useReferrers = (options: UseReferrersOptions = {}) => {
 
   // Handle search
   const handleSearch = useCallback((search: string) => {
-    setFilters((prev) => ({ ...prev, search }));
+    optionsRef.current = { ...optionsRef.current, search };
     setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+    fetchReferrersData();
+  }, [fetchReferrersData]);
 
   // Fetch referrers with current pagination and filters
   const fetchReferrers = useCallback(() => {
-    refetch();
-  }, [refetch]);
+    fetchReferrersData();
+  }, [fetchReferrersData]);
+
+  // Auto-fetch effect
+  useEffect(() => {
+    if (autoFetch) {
+      fetchReferrersData();
+    }
+  }, [autoFetch, pagination.page, pagination.limit]);
+
+  // Search effect
+  useEffect(() => {
+    if (fetchOptions.search !== undefined) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchReferrersData();
+    }
+  }, [fetchOptions.search]);
 
   return {
-    referrers: data?.data?.referrers || [],
-    loading: isLoading,
+    referrers: referrersData?.referrers || [],
+    loading,
     error,
     pagination,
-    filters,
     handlePageChange,
     handleItemsPerPageChange,
     handleSearch,
     fetchReferrers,
-    createReferrer: createReferrerMutation.mutate,
-    updateReferrer: updateReferrerMutation.mutate,
-    deleteReferrer: deleteReferrerMutation.mutate,
-    isCreating: createReferrerMutation.isLoading,
-    isUpdating: updateReferrerMutation.isLoading,
-    isDeleting: deleteReferrerMutation.isLoading,
+    createReferrer,
+    updateReferrer,
+    deleteReferrer,
+    isCreating: createLoading,
+    isUpdating: updateLoading,
+    isDeleting: deleteLoading,
   };
 };

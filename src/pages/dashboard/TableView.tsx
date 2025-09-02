@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import {
-  Table,
+  Table as TableType,
   ParcelOrder,
   OrderData,
   PaymentData,
@@ -14,7 +14,9 @@ import { TableGrid } from "../../components/grids";
 import { SalesSummary } from "../../components/modals";
 import OrderManagementModal from "../../components/modals/OrderManagementModal";
 import AddTableModal from "../../components/modals/AddTableModal";
-import TokenManagementView from "../../components/modals/TokenManagementView"; // Import the new Token view
+import TokenManagementView from "../../components/modals/TokenManagementView";
+import { useTables } from "../../hooks/useTables"; // Import the custom hook
+import { Table } from "../../services/api"; // Import API Table type
 
 const Header = ({ onAddTableClick }: { onAddTableClick: () => void }) => {
   return (
@@ -94,40 +96,46 @@ const NavigationTabs = ({
 
 const RestaurantManagementSystem: React.FC = () => {
   const [activeTab, setActiveTab] = useState("Table View");
-  const [tables, setTables] = useState<Table[]>([
-    { id: "A", name: "A", status: "available", amount: 0.0, duration: 0 },
-    { id: "B", name: "B", status: "available", amount: 0.0, duration: 0 },
-    { id: "C", name: "C", status: "available", amount: 0.0, duration: 0 },
-    { id: "D", name: "D", status: "available", amount: 0.0, duration: 0 },
-    { id: "E", name: "E", status: "available", amount: 0.0, duration: 0 },
-    { id: "F", name: "F", status: "available", amount: 0.0, duration: 0 },
-    {
-      id: "F_occupied1",
-      name: "Table-A6",
-      status: "occupied",
-      customerName: "Customer name 1",
-      amount: 12.0,
-      duration: 7,
-    },
-    {
-      id: "F_occupied2",
-      name: "Table-B1",
-      status: "occupied",
-      customerName: "Customer name 2",
-      amount: 68.0,
-      duration: 3,
-    },
-    {
-      id: "F_bill",
-      name: "Table-C3",
-      status: "bill-generated",
-      customerName: "Customer name 3",
-      amount: 87.0,
-      duration: 2,
-    },
-    { id: "F1", name: "F1", status: "available", amount: 0.0, duration: 0 },
-    { id: "F2", name: "F2", status: "available", amount: 0.0, duration: 0 },
-  ]);
+  
+  // Use the API hook instead of local state
+  const {
+    tables: apiTables,
+    loading: tablesLoading,
+    error: tablesError,
+    createTable,
+    createChildTable,
+    updateTable,
+    updateTableStatus,
+    deleteTable,
+    createLoading,
+    createChildLoading,
+    updateLoading,
+    updateStatusLoading,
+    deleteLoading,
+    fetchTables,
+  } = useTables();
+
+  // Convert API tables to UI format
+  const tables = React.useMemo<TableType[]>(() => {
+    return apiTables.map((apiTable: Table) => ({
+      id: apiTable._id,
+      name: apiTable.name,
+      status: apiTable.status === 'Available' ? 'available' 
+             : apiTable.status === 'Running' ? 'occupied'
+             : apiTable.status === 'Reserved' ? 'occupied'
+             : 'bill-generated',
+      amount: apiTable.totalAmount || 0.0,
+      duration: apiTable.elapsedMinutes || 0,
+      customerName: apiTable.isOccupied ? `Customer at ${apiTable.name}` : "",
+      tableNumber: apiTable.tableNumber,
+      capacity: apiTable.capacity,
+      location: apiTable.location,
+      description: apiTable.description,
+      isOccupied: apiTable.isOccupied,
+      parentTable: apiTable.parentTable,
+      childTables: apiTable.childTables || [],
+    }));
+  }, [apiTables]);
 
   const [parcelOrders, setParcelOrders] = useState<ParcelOrder[]>([
     { id: "P1", name: "P1", status: "available", amount: 0.0, duration: 0 },
@@ -145,10 +153,6 @@ const RestaurantManagementSystem: React.FC = () => {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isAddTableModalOpen, setIsAddTableModalOpen] = useState(false);
 
-  // State for managing table splitting
-  const [nextTableId, setNextTableId] = useState(1000); // Start with a high number to avoid conflicts
-  const [childTableCounters, setChildTableCounters] = useState<{ [key: string]: number }>({});
-
   const handleOrderClick = (order: OrderData) => {
     setSelectedOrder(order);
     setIsOrderModalOpen(true);
@@ -159,46 +163,35 @@ const RestaurantManagementSystem: React.FC = () => {
     setSelectedOrder(null);
   };
 
-  const handleSaveOrder = (
+  const handleSaveOrder = async (
     orderId: string,
     updatedAmount: number,
     customerName: string,
     status: "occupied" | "bill-generated"
   ) => {
-    setTables((prevTables) =>
-      prevTables.map((table) =>
-        table.id === orderId
-          ? {
-              ...table,
-              amount: updatedAmount,
-              customerName: customerName,
-              status: status,
-              duration:
-                table.duration === 0 && status === "occupied"
-                  ? 1
-                  : table.duration,
-            }
-          : table
-      )
-    );
-    setParcelOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              amount: updatedAmount,
-              customerName: customerName,
-              status: status === "bill-generated" ? "occupied" : status,
-              duration:
-                order.duration === 0 && status === "occupied"
-                  ? 1
-                  : order.duration,
-            }
-          : order
-      )
-    );
+    try {
+      // Find the table in the API tables
+      const apiTable = apiTables.find(t => t._id === orderId);
+      if (!apiTable) {
+        console.error("Table not found");
+        return;
+      }
 
-    handleCloseOrderModal();
+      // Update table status via API
+      const apiStatus = status === "occupied" ? "Running" : "Available";
+      await updateTableStatus(orderId, { status: apiStatus });
+
+      // If needed, update other table properties
+      if (updatedAmount !== apiTable.totalAmount) {
+        // Note: You might need to add an API endpoint to update totalAmount
+        // For now, we'll just update the status
+        console.log(`Amount updated to ${updatedAmount} for table ${apiTable.name}`);
+      }
+
+      handleCloseOrderModal();
+    } catch (error) {
+      console.error("Error saving order:", error);
+    }
   };
 
   const handleAddNewParcel = () => {
@@ -222,55 +215,93 @@ const RestaurantManagementSystem: React.FC = () => {
     setIsAddTableModalOpen(false);
   };
 
-  const handleAddTable = (tableName: string) => {
-    const newTable: Table = {
-      id: `Table-${tables.length + 1}-${Date.now()}`,
-      name: tableName,
-      status: "available",
-      amount: 0.0,
-      duration: 0,
-    };
-    setTables((prevTables) => [...prevTables, newTable]);
-  };
-
-  // NEW: Handle table splitting
-  const handleSplitTable = (parentTable: Table) => {
-    const parentName = parentTable.name;
-    const currentCounter = childTableCounters[parentName] || 0;
-    const newCounter = currentCounter + 1;
-    
-    // Create new child table with automatic naming
-    const childTable: Table = {
-      id: `${parentTable.id}-split-${newCounter}-${Date.now()}`,
-      name: `${parentName}-${newCounter}`, // e.g., "A-1", "A-2", etc.
-      status: "available",
-      customerName: "",
-      amount: 0.0,
-      duration: 0,
-    };
-
-    // Update state
-    setTables(prev => [...prev, childTable]);
-    setNextTableId(prev => prev + 1);
-    setChildTableCounters(prev => ({
-      ...prev,
-      [parentName]: newCounter
-    }));
-
-    console.log(`Split table ${parentName} into ${childTable.name}`);
-  };
-
-  // NEW: Handle child table deletion
-  const handleDeleteTable = (table: Table) => {
-    // Only allow deletion of child tables (those with '-' in name)
-    if (table.name.includes('-')) {
-      setTables(prev => prev.filter(t => t.id !== table.id));
-      console.log(`Deleted child table ${table.name}`);
-    } else {
-      console.log('Cannot delete main table');
-      // Optionally show a toast or alert here
+  const handleAddTable = async (tableName: string) => {
+    try {
+      // Generate a unique table number
+      const tableNumber = `T${Date.now()}`;
+      
+      await createTable({
+        name: tableName,
+        tableNumber: tableNumber,
+        capacity: 4, // Default capacity
+        location: "Main Floor", // Default location
+        description: `Table created: ${tableName}`,
+      });
+      
+      closeAddTableModal();
+    } catch (error) {
+      console.error("Error creating table:", error);
     }
   };
+
+  const handleSplitTable = async (parentTable: TableType) => {
+    try {
+      // Find the original API table
+      const apiParentTable = apiTables.find(t => t._id === parentTable.id);
+      if (!apiParentTable) {
+        console.error("Parent table not found");
+        return;
+      }
+
+      // Count existing child tables to generate next number
+      const childCount = apiParentTable.childTables?.length || 0;
+      const childName = `${parentTable.name}-${childCount + 1}`;
+      
+      await createChildTable(parentTable.id, {
+        name: childName,
+        capacity: Math.floor(apiParentTable.capacity / 2), // Split capacity
+        description: `Child table of ${parentTable.name}`,
+      });
+      
+      console.log(`Split table ${parentTable.name} into ${childName}`);
+    } catch (error) {
+      console.error("Error splitting table:", error);
+    }
+  };
+
+  const handleDeleteTable = async (table: TableType) => {
+    try {
+      // Only allow deletion of child tables (those with '-' in name)
+      if (table.name.includes('-')) {
+        await deleteTable(table.id);
+        console.log(`Deleted child table ${table.name}`);
+      } else {
+        console.log('Cannot delete main table');
+        // Optionally show a toast or alert here
+      }
+    } catch (error) {
+      console.error("Error deleting table:", error);
+    }
+  };
+
+  // Show loading state
+  if (tablesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading tables...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (tablesError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading tables</p>
+          <button 
+            onClick={() => fetchTables()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -311,7 +342,7 @@ const RestaurantManagementSystem: React.FC = () => {
             )}
 
             {activeTab === "Token" && (
-              <TokenManagementView /> // Render the new Token Management View
+              <TokenManagementView />
             )}
 
             {activeTab === "Swiggy" && (
@@ -337,6 +368,17 @@ const RestaurantManagementSystem: React.FC = () => {
           </div>
         </div>
       </main>
+      
+      {/* Loading overlay for API operations */}
+      {(createLoading || createChildLoading || updateLoading || updateStatusLoading || deleteLoading) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
+          <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span>Processing...</span>
+          </div>
+        </div>
+      )}
+
       {selectedOrder && (
         <OrderManagementModal
           isOpen={isOrderModalOpen}
@@ -345,6 +387,7 @@ const RestaurantManagementSystem: React.FC = () => {
           onSaveOrder={handleSaveOrder}
         />
       )}
+      
       <AddTableModal
         isOpen={isAddTableModalOpen}
         onClose={closeAddTableModal}

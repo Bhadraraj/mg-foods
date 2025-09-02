@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Edit2, Trash2, Plus } from 'lucide-react';
+import { Search, Edit2, Trash2 } from 'lucide-react';
 import Pagination from '../../../../components/ui/Pagination';
 import { useCategories } from '../../../../hooks/useCategories';
-import AddCategory from './AddCategory';
-import EditCategory from './EditCategory';
-import { CreateCategoryData, UpdateCategoryData } from '../../../../services/api/category';
+import { Category } from '../../../../services/api/category';
+ 
 
 // Interface for display purposes (mapped from API response)
 interface DisplayCategory {
@@ -17,12 +16,19 @@ interface DisplayCategory {
   _id: string;
 }
 
-type ModalType = 'add' | 'edit' | null;
+// Props for the CategoryListTable component
+interface CategoryListTableProps {
+  onEditCategory: (category: DisplayCategory) => void;
+  onAddCategory: () => void;
+  onDeleteCategory: (categoryId: string) => void;
+}
 
-const CategoryListing: React.FC = () => {
+const CategoryListTable: React.FC<CategoryListTableProps> = ({
+  onEditCategory,
+  onAddCategory,
+  onDeleteCategory,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [modalType, setModalType] = useState<ModalType>(null);
-  const [selectedCategory, setSelectedCategory] = useState<DisplayCategory | null>(null);
   
   // Memoize the options object to prevent unnecessary re-renders
   const categoriesOptions = useMemo(() => ({
@@ -38,16 +44,8 @@ const CategoryListing: React.FC = () => {
     pagination,
     handlePageChange,
     handleItemsPerPageChange,
-    createCategory,
-    updateCategory,
     deleteCategory,
-    assignItemsToCategory,
-    removeItemsFromCategory,
-    createLoading,
-    updateLoading,
     deleteLoading,
-    assignLoading,
-    removeLoading,
   } = useCategories(categoriesOptions);
   
   // Map API categories to the format expected by the component
@@ -69,84 +67,20 @@ const CategoryListing: React.FC = () => {
     setSearchTerm(value);
   }, []);
 
-  // Modal handlers
-  const handleAddCategory = () => {
-    setModalType('add');
-    setSelectedCategory(null);
-  };
-
-  const handleEditCategory = (category: DisplayCategory) => {
-    setSelectedCategory(category);
-    setModalType('edit');
-  };
-
-  const handleCloseModal = () => {
-    setModalType(null);
-    setSelectedCategory(null);
-  };
-
-  // Category CRUD operations
-  const handleSaveNewCategory = async (categoryData: CreateCategoryData & { itemIds?: string[] }) => {
-    try {
-      // Create the category
-      const response = await createCategory({
-        name: categoryData.name,
-        description: categoryData.description,
-      });
-
-      // If items were selected and we have the created category response, assign them
-      if (categoryData.itemIds && categoryData.itemIds.length > 0 && response?.data?.id) {
-        await assignItemsToCategory(response.data.id, { itemIds: categoryData.itemIds });
-      }
-      
-      handleCloseModal();
-    } catch (error) {
-      console.error('Failed to create category:', error);
-      alert('Failed to create category. Please try again.');
-    }
-  };
-
-  const handleSaveEditCategory = async (
-    categoryId: string, 
-    updateData: UpdateCategoryData,
-    itemChanges?: { add: string[], remove: string[] }
-  ) => {
-    try {
-      // Update category basic information
-      await updateCategory(categoryId, updateData);
-
-      // Handle item assignments/removals
-      if (itemChanges) {
-        if (itemChanges.add.length > 0) {
-          await assignItemsToCategory(categoryId, { itemIds: itemChanges.add });
-        }
-        if (itemChanges.remove.length > 0) {
-          await removeItemsFromCategory(categoryId, { itemIds: itemChanges.remove });
-        }
-      }
-
-      handleCloseModal();
-    } catch (error) {
-      console.error('Failed to update category:', error);
-      alert('Failed to update category. Please try again.');
-    }
-  };
-
   // Handle delete with confirmation
   const handleDelete = useCallback(async (categoryId: string, categoryName: string) => {
     if (window.confirm(`Are you sure you want to delete the category "${categoryName}"? This action cannot be undone.`)) {
       try {
         await deleteCategory(categoryId);
+        onDeleteCategory(categoryId);
       } catch (error) {
         console.error('Failed to delete category:', error);
         alert('Failed to delete category. Please try again.');
       }
     }
-  }, [deleteCategory]);
-
-  const isLoading = createLoading || updateLoading || assignLoading || removeLoading;
+  }, [deleteCategory, onDeleteCategory]);
   
-  // Show loading state for initial load
+  // Show loading state
   if (loading && categories.length === 0) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -185,10 +119,9 @@ const CategoryListing: React.FC = () => {
               <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
             </div>
             <button
-              onClick={handleAddCategory}
-              className="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition-colors whitespace-nowrap flex items-center gap-2"
+              onClick={onAddCategory}
+              className="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition-colors whitespace-nowrap"
             >
-              <Plus size={16} />
               Add New Category
             </button>
           </div>
@@ -249,17 +182,16 @@ const CategoryListing: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          className="text-blue-600 hover:text-blue-800 p-1 transition-colors"
-                          onClick={() => handleEditCategory(category)}
+                          className="text-blue-600 hover:text-blue-800 p-1"
+                          onClick={() => onEditCategory(category)}
                           title="Edit category"
-                          disabled={isLoading}
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
-                          className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 transition-colors"
+                          className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50"
                           onClick={() => handleDelete(category._id, category.categoryName)}
-                          disabled={deleteLoading || isLoading}
+                          disabled={deleteLoading}
                           title="Delete category"
                         >
                           <Trash2 size={16} />
@@ -290,10 +222,9 @@ const CategoryListing: React.FC = () => {
                           <p className="text-lg font-medium mb-1">No categories yet</p>
                           <p>Get started by creating your first category</p>
                           <button
-                            onClick={handleAddCategory}
-                            className="mt-3 px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition-colors flex items-center gap-2"
+                            onClick={onAddCategory}
+                            className="mt-3 px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition-colors"
                           >
-                            <Plus size={16} />
                             Add New Category
                           </button>
                         </div>
@@ -330,36 +261,9 @@ const CategoryListing: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Add Category Modal */}
-      {modalType === 'add' && (
-        <AddCategory
-          onClose={handleCloseModal}
-          onSave={handleSaveNewCategory}
-        />
-      )}
-
-      {/* Edit Category Modal */}
-      {modalType === 'edit' && selectedCategory && (
-        <EditCategory
-          categoryId={selectedCategory._id}
-          onClose={handleCloseModal}
-          onSave={handleSaveEditCategory}
-        />
-      )}
-
-      {/* Global Loading Overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mx-auto"></div>
-            <p className="mt-4 text-gray-600 text-center">Processing...</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default CategoryListing;
+export default CategoryListTable;
 export type { DisplayCategory as Category };

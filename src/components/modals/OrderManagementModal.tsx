@@ -6,159 +6,33 @@ import {
   OrderItem,
   OrderData,
   CustomerDetails,
-} from "../types/OrdermanagementTable";
+} from "../../types/index";
 import CustomerDetailsModal from "./CustomerDetailsModal";
-import MenuItemDetailsModal from "./MenuItemDetailsModal"; // Import the new modal
+import MenuItemDetailsModal from "./MenuItemDetailsModal";
+import { useCategories } from "../../hooks/useCategories";
+import { useItems } from "../../hooks/useItems";
+import { useApiMutation } from "../../hooks/useApi";
+import { kotService } from "../../services/api/kot";
 
-const foodItems: FoodItem[] = [
-  {
-    id: "FI001",
-    name: "Lemon Tea",
-    price: 12.0,
-    category: "Tea Shop (KOT1)",
-    image:
-      "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-  },
-  {
-    id: "FI002",
-    name: "Masala Tea",
-    price: 15.0,
-    category: "Tea Shop (KOT1)",
-    image:
-      "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-    variants: [
-      {
-        type: "image-radio", // As seen in image_bd3de6.png
-        label: "Variant",
-        options: [
-          {
-            value: "half-tea",
-            label: "Half Tea",
-            image: "/path/to/half-tea.png",
-          }, // Replace with actual paths
-          { value: "without", label: "Without", image: "/path/to/without.png" },
-          {
-            value: "half-sugar",
-            label: "Half sugar",
-            image: "/path/to/half-sugar.png",
-          },
-          {
-            value: "double-sugar",
-            label: "Double sugar",
-            image: "/path/to/double-sugar.png",
-          },
-          {
-            value: "light-tea",
-            label: "Light Tea",
-            image: "/path/to/light-tea.png",
-          },
-          {
-            value: "medium-tea",
-            label: "Medium Tea",
-            image: "/path/to/medium-tea.png",
-          },
-          {
-            value: "strong-tea",
-            label: "Strong Tea",
-            image: "/path/to/strong-tea.png",
-          },
-          {
-            value: "double-strong-tea",
-            label: "Double Strong Tea",
-            image: "/path/to/double-strong-tea.png",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "FI003",
-    name: "Cold Coffee",
-    price: 80.0,
-    category: "Juice shop (KOT2)",
-    image:
-      "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-    variants: [
-      {
-        type: "radio", // As seen in image_bcebd3.png
-        label: "Variant",
-        options: [
-          { value: "small", label: "Small" },
-          { value: "regular", label: "Regular" },
-          { value: "large", label: "Large", priceAdjustment: 20.0 }, // Example with price adjustment
-        ],
-      },
-    ],
-  },
-  {
-    id: "FI004",
-    name: "Orange Juice",
-    price: 100.0,
-    category: "Juice shop (KOT2)",
-    image:
-      "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-  },
-  {
-    id: "FI005",
-    name: "Vanilla Ice Cream",
-    price: 70.0,
-    category: "Ice cream shop (KOT3)",
-    image:
-      "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-  },
-  {
-    id: "FI006",
-    name: "Chocolate Ice Cream",
-    price: 90.0,
-    category: "Ice cream shop (KOT3)",
-    image:
-      "https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-  },
-  {
-    id: "FI007",
-    name: "Plain Dosa",
-    price: 40.0,
-    category: "Tea Shop (KOT1)",
-    image:
-      "https://images.unsplash.com/photo-1630383249896-424e482df921?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-  },
-  {
-    id: "FI008",
-    name: "Chicken Biryani",
-    price: 200.0,
-    category: "Tea Shop (KOT1)",
-    image:
-      "https://images.unsplash.com/photo-1563379091339-03246963d29c?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-  },
-  {
-    id: "FI009",
-    name: "Veg Noodles",
-    price: 120.0,
-    category: "Tea Shop (KOT1)",
-    image:
-      "https://images.unsplash.com/photo-1612838320302-4b3b3b3b3b3b?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-  },
-  {
-    id: "FI010",
-    name: "Paneer Butter Masala",
-    price: 180.0,
-    category: "Tea Shop (KOT1)",
-    image:
-      "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=300&h=200&fit=crop&crop=center",
-    currentStock: 94,
-  },
-];
+// FIXED: Transform API item to FoodItem interface
+const transformApiItemToFoodItem = (apiItem: any): FoodItem => {
+  return {
+    id: apiItem._id || apiItem.id,
+    name: apiItem.productName,
+    price: apiItem.priceDetails?.sellingPrice || 0,
+    // FIXED: Handle both category string and categories array
+    category: apiItem.category || 
+              (apiItem.categories && apiItem.categories[0]) || 
+              'Uncategorized',
+    image: apiItem.images?.primaryImage?.url || 
+           apiItem.images?.primaryImage?.path || 
+           apiItem.images?.primary || null,
+    currentStock: apiItem.stockDetails?.currentQuantity || 0,
+    // Add variants if available from API
+    variants: apiItem.variants || undefined,
+  };
+};
 
-// --- Food Item Card Component (internal to modal) ---
 const FoodItemCard: React.FC<{
   item: FoodItem;
   onClick: (item: FoodItem) => void;
@@ -220,6 +94,7 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
   onSaveOrder,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState("All Items");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerDetails>({
@@ -228,44 +103,91 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
     type: "Individual",
   });
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  const [isMenuItemDetailsModalOpen, setIsMenuItemDetailsModalOpen] =
-    useState(false);
-  const [selectedFoodItemForDetails, setSelectedFoodItemForDetails] =
-    useState<FoodItem | null>(null);
+  const [isMenuItemDetailsModalOpen, setIsMenuItemDetailsModalOpen] = useState(false);
+  const [selectedFoodItemForDetails, setSelectedFoodItemForDetails] = useState<FoodItem | null>(null);
+
+  // API hooks
+  const { categories, loading: categoriesLoading } = useCategories({
+    status: 'active',
+    autoFetch: true,
+  });
+
+  // FIXED: Updated items hook with proper category ID parameter
+  const { items, loading: itemsLoading, fetchItems, refetch: refetchItems } = useItems({
+    // CHANGED: Pass category ID instead of name
+    category: selectedCategoryId || undefined,
+    search: searchQuery || undefined,
+    status: 'active',
+    autoFetch: false, // We'll manually trigger fetches
+  });
+
+  const { execute: createKotMutation, loading: createKotLoading } = useApiMutation({
+    successMessage: 'KOT created successfully',
+  });
+
+  // Transform API items to FoodItem format
+  const foodItems: FoodItem[] = items.map(transformApiItemToFoodItem);
 
   useEffect(() => {
     if (isOpen) {
-      setOrderItems([
-        {
-          id: "FI001",
-          name: "Lemon Tea",
-          quantity: 1,
-          amount: 12.0,
-          price: 12.0,
-          kot: "Kot 01",
-        },
-      ]);
+      setOrderItems([]);
       setCustomerInfo((prev) => ({
         ...prev,
         name: orderData.customerName || "",
       }));
+      setSelectedCategory("All Items");
+      setSelectedCategoryId(null);
+      setSearchQuery("");
     }
   }, [isOpen, orderData]);
 
-  const categories = [
-    "All Items",
-    "Tea Shop (KOT1)",
-    "Juice shop (KOT2)",
-    "Ice cream shop (KOT3)",
-  ];
+  // FIXED: Fetch items when category or search changes
+  useEffect(() => {
+    if (isOpen) {
+      console.log('=== FETCHING ITEMS ===');
+      console.log('Selected category ID:', selectedCategoryId);
+      console.log('Search query:', searchQuery);
+      
+      // Create a timeout to debounce the search
+      const timeoutId = setTimeout(() => {
+        if (fetchItems) {
+          console.log('Calling fetchItems...');
+          
+          // FIXED: Use category ID for filtering
+          const fetchParams = {
+            category: selectedCategoryId || undefined,
+            search: searchQuery || undefined,
+            status: 'active',
+          };
+          
+          console.log('Fetch params:', fetchParams);
+          fetchItems(fetchParams);
+        } else {
+          console.warn('fetchItems is not available');
+        }
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedCategoryId, searchQuery, isOpen, fetchItems]);
 
   if (!isOpen) return null;
 
-  const filteredItems = foodItems.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      (selectedCategory === "All Items" || item.category === selectedCategory)
-  );
+  // Build categories list with "All Items" option
+  const categoriesList = [
+    { id: null, name: "All Items" },
+    ...categories.map(cat => ({ id: cat._id || cat.id, name: cat.name }))
+  ];
+
+  // FIXED: Handle category selection with both ID and name
+  const handleCategorySelect = (categoryId: string | null, categoryName: string) => {
+    console.log('=== CATEGORY SELECTED ===');
+    console.log('Category ID:', categoryId);
+    console.log('Category name:', categoryName);
+    
+    setSelectedCategory(categoryName);
+    setSelectedCategoryId(categoryId);
+  };
 
   const handleFoodItemCardClick = (item: FoodItem) => {
     setSelectedFoodItemForDetails(item);
@@ -326,15 +248,50 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
 
   const totalAmount = orderItems.reduce((sum, item) => sum + item.amount, 0);
 
-  const handleSaveAndPrint = () => {
-    onSaveOrder(orderData.id, totalAmount, customerInfo.name, "occupied");
-    onClose();
+  const handleCreateKot = async () => {
+    if (orderItems.length === 0) {
+      alert("Please add items to create KOT");
+      return;
+    }
+
+    const kotData = {
+      tableNumber: orderData.name,
+      orderReference: `ORD-${Date.now()}`,
+      items: orderItems.map(item => ({
+        item: item.id,
+        itemName: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        variant: item.variant || undefined,
+        kotNote: item.kotNote || undefined,
+      })),
+      customerDetails: {
+        name: customerInfo.name,
+        mobile: customerInfo.mobile,
+        type: customerInfo.type,
+      },
+      kotType: selectedCategory !== "All Items" ? selectedCategory : "General",
+      notes: `Order for ${orderData.name}`,
+    };
+
+    try {
+      await createKotMutation(() => kotService.createKot(kotData));
+      onSaveOrder(orderData.id, totalAmount, customerInfo.name, "occupied");
+      onClose();
+    } catch (error) {
+      console.error("Failed to create KOT:", error);
+      alert("Failed to create KOT. Please try again.");
+    }
+  };
+
+  const handleSaveAndPrint = async () => {
+    await handleCreateKot();
     printBill();
   };
 
-  const handleGenerateBill = () => {
+  const handleGenerateBill = async () => {
+    await handleCreateKot();
     onSaveOrder(orderData.id, totalAmount, customerInfo.name, "bill-generated");
-    onClose();
     printBill();
   };
 
@@ -425,7 +382,6 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      {/* Changed max-h-[90vh] to max-h-[95vh] and added overflow-y-auto to the main modal container */}
       <div className="bg-white rounded-lg w-full max-w-7xl lg:max-w-screen-xl max-h-[95vh] overflow-y-auto flex flex-col lg:flex-row shadow-lg">
         {/* Left Side - Food Selection */}
         <div className="flex-1 flex flex-col">
@@ -457,22 +413,25 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
 
           <div className="flex flex-1 flex-col sm:flex-row overflow-hidden">
             {/* Categories Sidebar */}
-            {/* Keep scrollbar-invisible here */}
             <div className="w-full sm:w-64 bg-gray-50 border-b sm:border-b-0 sm:border-r border-gray-200 p-4 overflow-y-auto scrollbar-invisible">
               <div className="space-y-2 grid grid-cols-2 gap-2 sm:block">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                      selectedCategory === category
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
+                {categoriesLoading ? (
+                  <div className="text-center text-gray-500 py-4">Loading categories...</div>
+                ) : (
+                  categoriesList.map((category) => (
+                    <button
+                      key={category.id || 'all'}
+                      onClick={() => handleCategorySelect(category.id, category.name)}
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
+                        selectedCategory === category.name
+                          ? "bg-blue-600 text-white"
+                          : "text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {category.name}
+                    </button>
+                  ))
+                )}
                 <button className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 border border-dashed border-gray-300">
                   + Add Category
                 </button>
@@ -480,19 +439,69 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
             </div>
 
             {/* Food Items Grid */}
-            {/* Keep scrollbar-invisible here */}
             <div className="flex-1 p-4 overflow-y-auto scrollbar-invisible">
-              {filteredItems.length === 0 ? (
+              {/* DEBUG: Debug information - Remove in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+                  <div className="font-semibold text-blue-800 mb-2">Debug Info:</div>
+                  <div className="space-y-1 text-blue-700">
+                    <p>Selected Category: <strong>{selectedCategory || 'All'}</strong></p>
+                    <p>Selected Category ID: <strong>{selectedCategoryId || 'None'}</strong></p>
+                    <p>Items found: <strong>{foodItems.length}</strong></p>
+                    <p>Search: <strong>{searchQuery || 'None'}</strong></p>
+                    <p>Loading: <strong>{itemsLoading ? 'Yes' : 'No'}</strong></p>
+                    <p>Categories loaded: <strong>{categories.length}</strong></p>
+                  </div>
+                  {/* ADDED: Sample of raw items data */}
+                  {foodItems.length > 0 && (
+                    <div className="mt-2 text-xs">
+                      <p className="font-semibold">First item sample:</p>
+                      <pre className="bg-white p-2 rounded overflow-x-auto">
+                        {JSON.stringify({
+                          name: foodItems[0].name,
+                          category: foodItems[0].category,
+                        }, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {itemsLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-gray-500">
+                    <div className="text-2xl mb-2">⏳</div>
+                    <p>Loading items...</p>
+                  </div>
+                </div>
+              ) : foodItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <div className="text-4xl mb-4">🔍</div>
                   <p className="text-lg">No items found</p>
                   <p className="text-sm">
-                    Try adjusting your search or category filter
+                    {selectedCategory && selectedCategory !== "All Items"
+                      ? `No items found in "${selectedCategory}" category`
+                      : "Try adjusting your search or category filter"
+                    }
                   </p>
+                  {/* ADDED: Refresh button for debugging */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <button 
+                      onClick={() => {
+                        console.log('Manual refetch triggered');
+                        if (refetchItems) {
+                          refetchItems();
+                        }
+                      }}
+                      className="mt-3 px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                    >
+                      Refresh Items
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {filteredItems.map((item) => (
+                  {foodItems.map((item) => (
                     <FoodItemCard
                       key={item.id}
                       item={item}
@@ -522,10 +531,8 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
             </div>
           </div>
 
-          {/* Keep scrollbar-invisible here */}
           <div className="flex-1 overflow-y-auto scrollbar-invisible">
             {/* Order Items Header */}
-            {/* Removed p-4 from here, added px-4 and py-2 for the header's own padding */}
             <div className="grid grid-cols-5 gap-2 text-sm font-medium text-gray-600 mb-2 border-b pb-2 px-4 py-2 sticky top-0 bg-white z-10">
               <span className="col-span-1">Kot</span>
               <span className="col-span-2">Items</span>
@@ -533,12 +540,10 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
               <span className="col-span-1 text-right">Price</span>
             </div>
 
-            {/* Order Items List - Removed padding from this outer div */}
+            {/* Order Items List */}
             <div>
               {orderItems.length === 0 ? (
                 <div className="text-center text-gray-500 py-8 px-4">
-                  {" "}
-                  {/* Added px-4 here for consistency */}
                   <div className="text-3xl mb-2">🛒</div>
                   <p>No items in order</p>
                   <p className="text-xs mt-1">Add items from the menu</p>
@@ -547,7 +552,6 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
                 orderItems.map((item) => (
                   <div
                     key={`${item.id}-${item.variant || ""}`}
-                    // Added px-4 to each item row for consistent horizontal alignment
                     className="grid grid-cols-5 gap-2 items-center py-2 px-4 border-b border-gray-200 last:border-b-0"
                   >
                     <span className="text-sm">{item.kot}</span>
@@ -566,7 +570,6 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
                         onClick={() =>
                           updateQuantity(item.id, -1, item.variant)
                         }
-                        // Added bg-gray-200 for the button background
                         className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded text-xs hover:bg-gray-300"
                       >
                         <Minus size={12} />
@@ -576,7 +579,6 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
                       </span>
                       <button
                         onClick={() => updateQuantity(item.id, 1, item.variant)}
-                        // Added bg-gray-200 for the button background
                         className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded text-xs hover:bg-gray-300"
                       >
                         <Plus size={12} />
@@ -586,12 +588,6 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
                       <span className="text-sm mr-2">
                         ₹ {item.amount.toFixed(2)}
                       </span>
-                      {/* <button
-                        onClick={() => removeItem(item.id, item.variant)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <X size={14} />
-                      </button> */}
                     </div>
                   </div>
                 ))
@@ -599,15 +595,12 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
 
               {customerInfo.name && (
                 <div className="text-right text-gray-700 text-sm mt-4 px-4 pb-2">
-                  {" "}
-                  {/* Added px-4 and pb-2 for consistent padding */}
                   Customer:{" "}
                   <span className="font-semibold">{customerInfo.name}</span>
                 </div>
               )}
             </div>
           </div>
-
           <div className="p-4 border-t bg-gray-50">
             <div className="text-right text-lg font-bold mb-4">
               Total: ₹{totalAmount.toFixed(2)}
@@ -616,12 +609,17 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
             <div className="flex gap-2 mb-3 flex-col sm:flex-row">
               <button
                 onClick={handleGenerateBill}
-                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md text-sm hover:bg-green-700"
+                disabled={createKotLoading || orderItems.length === 0}
+                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Generate Bill
+                {createKotLoading ? "Processing..." : "Generate Bill"}
               </button>
-              <button className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm hover:bg-blue-700">
-                KOT
+              <button 
+                onClick={handleCreateKot}
+                disabled={createKotLoading || orderItems.length === 0}
+                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {createKotLoading ? "Creating..." : "Create KOT"}
               </button>
             </div>
             <div className="flex gap-2 flex-col sm:flex-row">
@@ -646,9 +644,10 @@ const OrderManagementModal: React.FC<OrderManagementModalProps> = ({
               </button>
               <button
                 onClick={handleSaveAndPrint}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm hover:bg-blue-700"
+                disabled={createKotLoading || orderItems.length === 0}
+                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save & Print
+                {createKotLoading ? "Processing..." : "Save & Print"}
               </button>
             </div>
           </div>

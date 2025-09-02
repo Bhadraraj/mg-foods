@@ -1,6 +1,6 @@
 import React from 'react';
 import { User } from 'lucide-react';
-import { Party } from '../../../components/types/';
+import { Party } from '../../../types/index';
 
 interface PartyTableProps {
   parties: Party[];

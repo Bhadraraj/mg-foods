@@ -167,13 +167,51 @@ class ApiClient {
   }
 
   async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.instance.post<ApiResponse<T>>(url, data, config);
-    return response.data;
+    // Add duplicate prevention for POST requests (critical for token creation)
+    const cacheKey = this.getCacheKey('POST', url, data);
+    
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log('Preventing duplicate POST request:', cacheKey);
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    const request = this.instance.post<ApiResponse<T>>(url, data, config).then(response => {
+      // Clean up after a short delay to allow for legitimate retries
+      setTimeout(() => {
+        this.pendingRequests.delete(cacheKey);
+      }, 1000);
+      return response.data;
+    }).catch(error => {
+      this.pendingRequests.delete(cacheKey);
+      throw error;
+    });
+
+    this.pendingRequests.set(cacheKey, request);
+    return request;
   }
 
   async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.instance.put<ApiResponse<T>>(url, data, config);
-    return response.data;
+    // Add duplicate prevention for PUT requests
+    const cacheKey = this.getCacheKey('PUT', url, data);
+    
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log('Preventing duplicate PUT request:', cacheKey);
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    const request = this.instance.put<ApiResponse<T>>(url, data, config).then(response => {
+      // Clean up after a short delay to allow for legitimate retries
+      setTimeout(() => {
+        this.pendingRequests.delete(cacheKey);
+      }, 1000);
+      return response.data;
+    }).catch(error => {
+      this.pendingRequests.delete(cacheKey);
+      throw error;
+    });
+
+    this.pendingRequests.set(cacheKey, request);
+    return request;
   }
 
   async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
@@ -191,6 +229,11 @@ class ApiClient {
       },
     });
     return response.data;
+  }
+
+  // Method to clear pending requests (useful for cleanup)
+  clearPendingRequests() {
+    this.pendingRequests.clear();
   }
 }
 

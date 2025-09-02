@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { customerService, Customer, CustomerFilters, CreateCustomerData, UpdateCustomerData } from '../services/api/customer';
 import { useApiQuery, useApiMutation } from './useApi';
 
@@ -15,6 +15,12 @@ export const useCustomers = (options: UseCustomersOptions = {}) => {
   });
 
   const { autoFetch = true, ...fetchOptions } = options;
+  const fetchOptionsRef = useRef(fetchOptions);
+  
+  // Update ref when fetchOptions change
+  useEffect(() => {
+    fetchOptionsRef.current = fetchOptions;
+  }, [fetchOptions]);
 
   const {
     data: customersData,
@@ -49,14 +55,20 @@ export const useCustomers = (options: UseCustomersOptions = {}) => {
     onSuccess: () => fetchCustomersData(),
   });
 
+  // Remove pagination from dependencies to avoid infinite loop
   const fetchCustomersData = useCallback(async (customOptions?: Partial<UseCustomersOptions>) => {
-    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
+    const params = { 
+      ...fetchOptionsRef.current, 
+      ...customOptions, 
+      page: pagination.page, 
+      limit: pagination.limit 
+    };
     const response = await fetchCustomers(() => customerService.getCustomers(params));
     
     if (response?.pagination) {
       setPagination(response.pagination);
     }
-  }, [fetchOptions, fetchCustomers, pagination.page, pagination.limit]);
+  }, [fetchCustomers]); // Only depend on fetchCustomers
 
   const createCustomer = useCallback(async (data: CreateCustomerData): Promise<void> => {
     await createCustomerMutation(() => customerService.createCustomer(data));
@@ -78,11 +90,19 @@ export const useCustomers = (options: UseCustomersOptions = {}) => {
     setPagination(prev => ({ ...prev, limit, page: 1 }));
   }, []);
 
+  // Separate effect for initial fetch
   useEffect(() => {
     if (autoFetch) {
       fetchCustomersData();
     }
-  }, [fetchCustomersData, autoFetch, pagination.page, pagination.limit]);
+  }, [autoFetch]); // Only run on mount when autoFetch is true
+
+  // Separate effect for pagination changes
+  useEffect(() => {
+    if (autoFetch && (pagination.page !== 1 || pagination.limit !== 20)) {
+      fetchCustomersData();
+    }
+  }, [pagination.page, pagination.limit]); // Only trigger when pagination actually changes
 
   return {
     customers: customersData?.customers || [],

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { labourService, Labour, AttendanceRecord, LabourFilters, AttendanceFilters, CreateLabourData, UpdateLabourData, MarkAttendanceData } from '../services/api/labour';
 import { useApiQuery, useApiMutation } from './useApi';
 
@@ -11,14 +11,20 @@ interface UseAttendanceOptions extends AttendanceFilters {
 }
 
 export const useLabour = (options: UseLabourOptions = {}) => {
+  const { autoFetch = true, ...fetchOptions } = options;
+  const optionsRef = useRef(fetchOptions);
+  
+  // Update ref when options change
+  useEffect(() => {
+    optionsRef.current = fetchOptions;
+  }, [JSON.stringify(fetchOptions)]);
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
     total: 0,
     pages: 0,
   });
-
-  const { autoFetch = true, ...fetchOptions } = options;
 
   const {
     data: labourData,
@@ -29,12 +35,37 @@ export const useLabour = (options: UseLabourOptions = {}) => {
     showSuccessToast: false,
   });
 
+  const fetchLabourData = useCallback(async (customOptions?: Partial<UseLabourOptions>) => {
+    const params = { 
+      ...optionsRef.current, 
+      ...customOptions, 
+      page: pagination.page, 
+      limit: pagination.limit 
+    };
+    
+    try {
+      const response = await fetchLabour(() => labourService.getLabour(params));
+      
+      if (response?.pagination) {
+        setPagination(response.pagination);
+      }
+      return response;
+    } catch (err) {
+      console.error('Error fetching labour data:', err);
+      throw err;
+    }
+  }, [fetchLabour, pagination.page, pagination.limit]);
+
   const {
     execute: createLabourMutation,
     loading: createLoading,
   } = useApiMutation({
     successMessage: 'Labour record created successfully',
-    onSuccess: () => fetchLabourData(),
+    onSuccess: () => {
+      // Reset to first page and refetch
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchLabourData();
+    },
   });
 
   const {
@@ -52,15 +83,6 @@ export const useLabour = (options: UseLabourOptions = {}) => {
     successMessage: 'Labour record deleted successfully',
     onSuccess: () => fetchLabourData(),
   });
-
-  const fetchLabourData = useCallback(async (customOptions?: Partial<UseLabourOptions>) => {
-    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
-    const response = await fetchLabour(() => labourService.getLabour(params));
-    
-    if (response?.pagination) {
-      setPagination(response.pagination);
-    }
-  }, [fetchOptions, fetchLabour, pagination.page, pagination.limit]);
 
   const createLabour = useCallback(async (data: CreateLabourData): Promise<void> => {
     await createLabourMutation(() => labourService.createLabour(data));
@@ -82,11 +104,20 @@ export const useLabour = (options: UseLabourOptions = {}) => {
     setPagination(prev => ({ ...prev, limit, page: 1 }));
   }, []);
 
+  // Only fetch when necessary - avoid infinite loops
   useEffect(() => {
     if (autoFetch) {
       fetchLabourData();
     }
-  }, [fetchLabourData, autoFetch, pagination.page, pagination.limit]);
+  }, [autoFetch, pagination.page, pagination.limit]);
+
+  // Separate effect for search term changes
+  useEffect(() => {
+    if (fetchOptions.search !== undefined) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchLabourData();
+    }
+  }, [fetchOptions.search]);
 
   return {
     labour: labourData?.labour || [],
@@ -106,14 +137,19 @@ export const useLabour = (options: UseLabourOptions = {}) => {
 };
 
 export const useAttendance = (options: UseAttendanceOptions = {}) => {
+  const { autoFetch = true, ...fetchOptions } = options;
+  const optionsRef = useRef(fetchOptions);
+  
+  useEffect(() => {
+    optionsRef.current = fetchOptions;
+  }, [JSON.stringify(fetchOptions)]);
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
     total: 0,
     pages: 0,
   });
-
-  const { autoFetch = true, ...fetchOptions } = options;
 
   const {
     data: attendanceData,
@@ -123,6 +159,27 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
   } = useApiQuery<{ attendance: AttendanceRecord[] }>({
     showSuccessToast: false,
   });
+
+  const fetchAttendanceData = useCallback(async (customOptions?: Partial<UseAttendanceOptions>) => {
+    const params = { 
+      ...optionsRef.current, 
+      ...customOptions, 
+      page: pagination.page, 
+      limit: pagination.limit 
+    };
+    
+    try {
+      const response = await fetchAttendance(() => labourService.getAttendanceRecords(params));
+      
+      if (response?.pagination) {
+        setPagination(response.pagination);
+      }
+      return response;
+    } catch (err) {
+      console.error('Error fetching attendance data:', err);
+      throw err;
+    }
+  }, [fetchAttendance, pagination.page, pagination.limit]);
 
   const {
     execute: markAttendanceMutation,
@@ -139,15 +196,6 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     successMessage: 'Attendance updated successfully',
     onSuccess: () => fetchAttendanceData(),
   });
-
-  const fetchAttendanceData = useCallback(async (customOptions?: Partial<UseAttendanceOptions>) => {
-    const params = { ...fetchOptions, ...customOptions, page: pagination.page, limit: pagination.limit };
-    const response = await fetchAttendance(() => labourService.getAttendanceRecords(params));
-    
-    if (response?.pagination) {
-      setPagination(response.pagination);
-    }
-  }, [fetchOptions, fetchAttendance, pagination.page, pagination.limit]);
 
   const markAttendance = useCallback(async (data: MarkAttendanceData): Promise<void> => {
     await markAttendanceMutation(() => labourService.markAttendance(data));
@@ -169,7 +217,14 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     if (autoFetch) {
       fetchAttendanceData();
     }
-  }, [fetchAttendanceData, autoFetch, pagination.page, pagination.limit]);
+  }, [autoFetch, pagination.page, pagination.limit]);
+
+  useEffect(() => {
+    if (fetchOptions.date || fetchOptions.labourId) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchAttendanceData();
+    }
+  }, [fetchOptions.date, fetchOptions.labourId]);
 
   return {
     attendance: attendanceData?.attendance || [],

@@ -9,3 +9,7 @@ export { useCustomers } from './useCustomers';
 export { useLabour, useAttendance } from './useLabour';
 export { useRacks } from './useRacks';
 export { usePurchases } from './usePurchases';
+export { useOffers } from './useOffers';
+export { useCoupons } from './useCoupons';
+export { useReferrerPoints } from './useReferrerPoints';
+export { useTables } from './useTables';
