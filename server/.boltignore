@@ -1,5 +1,33 @@
+# =====================
+# Dependencies
+node_modules/
+
+# Build & Cache
+dist/
+dist-ssr/
+build/
+.cache/
+coverage/
+.vite/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# Large Files
+uploads/
+images/
+*.zip
+*.tar
+*.rar
+*.mp4
+*.mov
+*.avi
+*.mkv
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,51 +35,17 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Node dependencies
-node_modules/
+# Bolt-specific
+src.zip
 
-# Build & Output
-dist/
-dist-ssr/
-build/
-.cache/
-coverage/
-
-# Local environment
-*.local
-.env
-.env.*.local
-
-# Uploaded media & assets
-uploads/
-images/
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-*.webp
-*.mp4
-*.mov
-*.mkv
-*.avi
-
-# Archives & Compressed files
-*.zip
-*.tar
-*.gz
-*.rar
-
-# IDE & OS Files
+# Editor & OS Files
+.DS_Store
+Thumbs.db
 .vscode/*
 !.vscode/extensions.json
-.idea/
-.DS_Store
+.idea
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-# Temporary files
-Thumbs.db
